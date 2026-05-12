@@ -16,25 +16,25 @@ The API is the only thing we are building. No frontend, no automated tests. We w
 
 Each line is a decision and the reason behind it.
 
-| Area | Choice | Why this and not something else |
-|---|---|---|
-| Language | **TypeScript** | Catches bugs before the code runs. Pairs perfectly with Zod (one schema gives us both validation and types). |
-| Runtime | **Node.js 20 LTS** | Current long-term support release. Stable native ESM, built-in `fetch`, supported until April 2026. Node 18 is already past end-of-life. |
-| Module system | **ESM** (`"type": "module"` in `package.json`) | Modern standard. The one quirk: in our `.ts` source files, relative imports must end in `.js` (e.g. `import { foo } from "./foo.js"`), because that is what the compiled output will use. Annoying once, then invisible. |
-| Web framework | **Express 5** | Mature, well-documented, exactly what the spec asks for. Express 5 finally handles async errors natively, so our `catchAsync` wrapper stays simple. |
-| Database | **MongoDB** | Tags are an array — Mongo stores arrays natively, SQL would need a join table. Metadata shape may grow per category, schemaless wins. Built-in text index handles the title search requirement with zero extra infrastructure. |
-| ODM | **Mongoose** | The standard for Mongo + TypeScript. Gives us schemas, validation, hooks, and typed models. Prisma's Mongo support is too limited (no `$text` search, no transactions in the way we want). |
-| Validation | **Zod** | One schema produces both runtime checks and TypeScript types via `z.infer<>`. Joi predates good TS support and would force us to duplicate every shape. |
-| File uploads | **Multer** | The spec asks for it. Industry default for `multipart/form-data` in Express. |
-| Auth — passwords | **bcrypt** | Battle-tested password hashing. Slow on purpose (that is the point). |
-| Auth — tokens | **jsonwebtoken** | Stateless JWTs. No session store needed. |
-| Logging | **Pino** | Fastest Node logger, outputs structured JSON, plays well with log aggregators if we ever deploy. `pino-pretty` makes it human-readable in development. |
-| Env loading | **dotenv** + **Zod** | `dotenv` loads `.env`, Zod validates it on boot. If `MONGO_URI` is missing, the app fails immediately with a clear message instead of crashing later. |
-| Dev server | **tsx** | Runs TypeScript directly with watch mode. Simpler than `ts-node-dev` or `nodemon + ts-node`. One dependency, no config. |
-| Linting | **ESLint** with `typescript-eslint` | Standard. Catches real bugs (unused vars, missing awaits) on top of style. |
-| Formatting | **Prettier** | Stops every arguments about style. Runs on save and on commit. |
-| Git hooks | **Husky** + **lint-staged** | On every commit, lint and format only the files that changed. Keeps the main branch clean without slowing commits down. |
-| Editor config | **`.editorconfig`** | Makes indentation and line endings consistent across editors. One file, no setup. |
+| Area             | Choice                                         | Why this and not something else                                                                                                                                                                                                |
+| ---------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Language         | **TypeScript**                                 | Catches bugs before the code runs. Pairs perfectly with Zod (one schema gives us both validation and types).                                                                                                                   |
+| Runtime          | **Node.js 20 LTS**                             | Current long-term support release. Stable native ESM, built-in `fetch`, supported until April 2026. Node 18 is already past end-of-life.                                                                                       |
+| Module system    | **ESM** (`"type": "module"` in `package.json`) | Modern standard. The one quirk: in our `.ts` source files, relative imports must end in `.js` (e.g. `import { foo } from "./foo.js"`), because that is what the compiled output will use. Annoying once, then invisible.       |
+| Web framework    | **Express 5**                                  | Mature, well-documented, exactly what the spec asks for. Express 5 finally handles async errors natively, so our `catchAsync` wrapper stays simple.                                                                            |
+| Database         | **MongoDB**                                    | Tags are an array — Mongo stores arrays natively, SQL would need a join table. Metadata shape may grow per category, schemaless wins. Built-in text index handles the title search requirement with zero extra infrastructure. |
+| ODM              | **Mongoose**                                   | The standard for Mongo + TypeScript. Gives us schemas, validation, hooks, and typed models. Prisma's Mongo support is too limited (no `$text` search, no transactions in the way we want).                                     |
+| Validation       | **Zod**                                        | One schema produces both runtime checks and TypeScript types via `z.infer<>`. Joi predates good TS support and would force us to duplicate every shape.                                                                        |
+| File uploads     | **Multer**                                     | The spec asks for it. Industry default for `multipart/form-data` in Express.                                                                                                                                                   |
+| Auth — passwords | **bcrypt**                                     | Battle-tested password hashing. Slow on purpose (that is the point).                                                                                                                                                           |
+| Auth — tokens    | **jsonwebtoken**                               | Stateless JWTs. No session store needed.                                                                                                                                                                                       |
+| Logging          | **Pino**                                       | Fastest Node logger, outputs structured JSON, plays well with log aggregators if we ever deploy. `pino-pretty` makes it human-readable in development.                                                                         |
+| Env loading      | **dotenv** + **Zod**                           | `dotenv` loads `.env`, Zod validates it on boot. If `MONGO_URI` is missing, the app fails immediately with a clear message instead of crashing later.                                                                          |
+| Dev server       | **tsx**                                        | Runs TypeScript directly with watch mode. Simpler than `ts-node-dev` or `nodemon + ts-node`. One dependency, no config.                                                                                                        |
+| Linting          | **ESLint** with `typescript-eslint`            | Standard. Catches real bugs (unused vars, missing awaits) on top of style.                                                                                                                                                     |
+| Formatting       | **Prettier**                                   | Stops every arguments about style. Runs on save and on commit.                                                                                                                                                                 |
+| Git hooks        | **Husky** + **lint-staged**                    | On every commit, lint and format only the files that changed. Keeps the main branch clean without slowing commits down.                                                                                                        |
+| Editor config    | **`.editorconfig`**                            | Makes indentation and line endings consistent across editors. One file, no setup.                                                                                                                                              |
 
 ---
 
@@ -86,11 +86,13 @@ The rule of thumb: **routes call controllers, controllers call services, service
 Every response — success or error — follows the same shape. The frontend never has to guess.
 
 **Success**
+
 ```json
 { "status": "success", "data": { ... } }
 ```
 
 **Error**
+
 ```json
 { "status": "error", "message": "Human-readable summary", "details": [ ... ] }
 ```
@@ -103,7 +105,10 @@ Every response — success or error — follows the same shape. The frontend nev
   "message": "Validation failed",
   "details": [
     { "field": "title", "message": "title is required" },
-    { "field": "category", "message": "category must be one of image, document" }
+    {
+      "field": "category",
+      "message": "category must be one of image, document"
+    }
   ]
 }
 ```
@@ -127,6 +132,7 @@ We will write two tiny helpers in `utils/response.ts` — `sendSuccess(res, data
 ## 5. Error handling
 
 ### The `AppError` class
+
 A small class that extends `Error` and adds two fields: an HTTP `statusCode` and an `isOperational` flag (always `true` for errors we throw on purpose). Anywhere in the code, we can do:
 
 ```ts
@@ -136,6 +142,7 @@ throw new AppError("Media not found", 404);
 …and trust that the right status code and message will reach the client.
 
 ### The global error middleware
+
 Registered last in `app.ts`. It receives every error, whether from `AppError`, from Mongoose (e.g. cast errors), or from anywhere else. It does three things:
 
 1. Logs the error (full stack in development, just the message in production).
@@ -145,6 +152,7 @@ Registered last in `app.ts`. It receives every error, whether from `AppError`, f
 We never leak stack traces to clients in production.
 
 ### Process-level safety nets
+
 In `server.ts` we listen for:
 
 - `unhandledRejection` — a Promise rejected and nobody caught it. Log it and exit.
@@ -153,6 +161,7 @@ In `server.ts` we listen for:
 Exiting on these is intentional: the process is in an unknown state. A process manager (or `tsx watch` in dev) will restart it.
 
 ### `catchAsync`
+
 A one-line wrapper so controllers don't need `try/catch`:
 
 ```ts
@@ -199,20 +208,25 @@ Validation runs **before** the controller, never inside it. By the time a contro
 ## 8. Authentication & authorization
 
 ### Model
+
 A `User` document holds `email`, `passwordHash`, `createdAt`. Passwords are hashed with bcrypt (cost factor 10) before saving — handled by a Mongoose `pre("save")` hook.
 
 ### Endpoints
+
 - `POST /auth/register` — create a user, return a JWT.
 - `POST /auth/login` — verify password, return a JWT.
 - `GET /auth/me` — return the current user (requires token).
 
 ### JWT
+
 Signed with `JWT_SECRET` from env, expires in `JWT_EXPIRES_IN` (default 7 days). Payload is just `{ userId }`. The client sends it as `Authorization: Bearer <token>`.
 
 ### The `authenticate` middleware
+
 Reads the header, verifies the token, loads the user from the database, attaches it to `req.user`. If anything fails → 401.
 
 ### Ownership
+
 Every `Media` document stores `ownerId` (the user who uploaded it). The media service enforces:
 
 - **Create** — always sets `ownerId` to the current user.
@@ -255,7 +269,7 @@ These are the conventions the whole codebase follows. Prettier handles spacing; 
 - **Imports**: third-party first, then internal, separated by a blank line. Relative imports end in `.js` (ESM rule).
 - **No default exports** except for the Express app itself. Named exports make refactors safer and grep work.
 - **No `any`**. If we genuinely don't know a type, use `unknown` and narrow.
-- **Comments**: explain *why*, never *what*. The code says what.
+- **Comments**: explain _why_, never _what_. The code says what.
 
 ---
 
@@ -297,17 +311,17 @@ This is the order we will write the code. Each step leaves the app runnable, so 
 
 ## 13. API endpoints (final)
 
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| POST | `/auth/register` | — | Create an account, return JWT |
-| POST | `/auth/login` | — | Log in, return JWT |
-| GET | `/auth/me` | ✅ | Current user info |
-| POST | `/media` | ✅ | Upload one file + metadata |
-| GET | `/media` | ✅ | List own media (filter/search/paginate) |
-| GET | `/media/:id` | ✅ | Get one media item (owner only) |
-| PUT | `/media/:id` | ✅ | Update metadata (owner only) |
-| DELETE | `/media/:id` | ✅ | Delete media + file (owner only) |
-| GET | `/health` | — | Liveness probe |
+| Method | Path             | Auth | Purpose                                 |
+| ------ | ---------------- | ---- | --------------------------------------- |
+| POST   | `/auth/register` | —    | Create an account, return JWT           |
+| POST   | `/auth/login`    | —    | Log in, return JWT                      |
+| GET    | `/auth/me`       | ✅   | Current user info                       |
+| POST   | `/media`         | ✅   | Upload one file + metadata              |
+| GET    | `/media`         | ✅   | List own media (filter/search/paginate) |
+| GET    | `/media/:id`     | ✅   | Get one media item (owner only)         |
+| PUT    | `/media/:id`     | ✅   | Update metadata (owner only)            |
+| DELETE | `/media/:id`     | ✅   | Delete media + file (owner only)        |
+| GET    | `/health`        | —    | Liveness probe                          |
 
 ---
 

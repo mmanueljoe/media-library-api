@@ -42,7 +42,7 @@
   },
   "scripts": {
     "prepare": "husky install",
-    "dev": "tsx watch src/app.ts",
+    "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc",
     "lint": "eslint .",

@@ -10,29 +10,31 @@ Before any installs, understand what each tool is for. If you know **what proble
 
 ### The tools, one sentence each
 
-| Tool | What it solves |
-|---|---|
-| **Node.js** | Runs JavaScript outside the browser (on your server). |
-| **TypeScript** | Adds types to JavaScript so the compiler catches bugs before runtime. |
-| **tsc** (TypeScript compiler) | Turns `.ts` files into plain `.js` files the Node runtime can run. |
-| **tsx** | Runs `.ts` files directly in development, no compile step. Has its own watcher (`tsx watch`). |
-| **ESLint** | Reads your code and flags real bugs and bad patterns (unused variables, missing awaits, etc.). |
-| **Prettier** | Formats your code so spacing, quotes, and semicolons are always identical. Not about bugs — about consistency. |
-| **eslint-config-prettier** | Turns off the ESLint rules that overlap with Prettier so they stop arguing with each other. |
-| **Husky** | Runs scripts automatically on git events like `commit` or `push`. |
-| **lint-staged** | Runs commands only on the files you staged with `git add`. Pairs with Husky to make commits fast. |
-| **EditorConfig** | A tiny file that tells every editor to use the same indentation and line endings. |
-| **dotenv** | Loads environment variables from a `.env` file into `process.env`. |
-| **Yarn** (or npm/pnpm) | Installs packages and runs scripts. |
+| Tool                          | What it solves                                                                                                 |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Node.js**                   | Runs JavaScript outside the browser (on your server).                                                          |
+| **TypeScript**                | Adds types to JavaScript so the compiler catches bugs before runtime.                                          |
+| **tsc** (TypeScript compiler) | Turns `.ts` files into plain `.js` files the Node runtime can run.                                             |
+| **tsx**                       | Runs `.ts` files directly in development, no compile step. Has its own watcher (`tsx watch`).                  |
+| **ESLint**                    | Reads your code and flags real bugs and bad patterns (unused variables, missing awaits, etc.).                 |
+| **Prettier**                  | Formats your code so spacing, quotes, and semicolons are always identical. Not about bugs — about consistency. |
+| **eslint-config-prettier**    | Turns off the ESLint rules that overlap with Prettier so they stop arguing with each other.                    |
+| **Husky**                     | Runs scripts automatically on git events like `commit` or `push`.                                              |
+| **lint-staged**               | Runs commands only on the files you staged with `git add`. Pairs with Husky to make commits fast.              |
+| **EditorConfig**              | A tiny file that tells every editor to use the same indentation and line endings.                              |
+| **dotenv**                    | Loads environment variables from a `.env` file into `process.env`.                                             |
+| **Yarn** (or npm/pnpm)        | Installs packages and runs scripts.                                                                            |
 
 ### Two things people get confused about
 
 **1. ESLint vs Prettier — they do different jobs.**
+
 - ESLint cares about **correctness** ("you have an unused variable", "this promise has no await").
 - Prettier cares about **appearance** ("use two spaces, double quotes, semicolons").
 - They overlap on some style rules (e.g. quotes). That's why `eslint-config-prettier` exists — it disables ESLint's style rules so Prettier wins those battles.
 
 **2. `tsc` vs `tsx` — different tools.**
+
 - `tsc` is the official **compiler**. It produces `.js` files in `dist/`. Use it for production builds (`yarn build`) and for type-checking (`yarn typecheck`).
 - `tsx` is a **runner**. It executes `.ts` files directly without writing any output. Use it for development (`tsx watch src/app.ts`).
 - They're not interchangeable. `tsc` does not run your code; `tsx` does not produce build output.
@@ -66,6 +68,7 @@ yarn add -D typescript @types/node tsx
 ```
 
 **What each does:**
+
 - `typescript` — the TypeScript compiler (`tsc`).
 - `@types/node` — type definitions for Node's built-in modules (`fs`, `path`, `process`, etc.). Without these, TypeScript doesn't know what `process.env` is.
 - `tsx` — runs `.ts` files directly during development.
@@ -134,6 +137,7 @@ Create `tsconfig.dev.json`:
 ```
 
 **Why have two?**
+
 - `tsconfig.json` is for **building** — it writes `.js` to `dist/`.
 - `tsconfig.dev.json` is for **checking types only** — it doesn't write anything. Used by `tsc --noEmit -p tsconfig.dev.json` in your `typecheck` script. It also allows `.ts` extensions in imports if you ever want that during dev.
 
@@ -169,13 +173,14 @@ yarn add -D eslint @eslint/js typescript-eslint globals \
 ```
 
 **What each does:**
+
 - `eslint` — the linter itself.
 - `@eslint/js` — ESLint's core JavaScript rules.
 - `typescript-eslint` — adds TypeScript support to ESLint (and TypeScript-specific rules).
 - `globals` — ready-made lists of global variables (e.g. all Node globals like `process`, `Buffer`).
 - `prettier` — the formatter.
 - `eslint-config-prettier` — disables ESLint rules that conflict with Prettier.
-- `eslint-plugin-prettier` — optional; runs Prettier *as* an ESLint rule. Most people skip this and run them as separate steps.
+- `eslint-plugin-prettier` — optional; runs Prettier _as_ an ESLint rule. Most people skip this and run them as separate steps.
 
 ### Step 8 — Create `eslint.config.js` (flat config)
 
@@ -201,6 +206,7 @@ export default defineConfig([
 ```
 
 **Plain English:**
+
 - The first object says "lint these file types, use the recommended JS rules, and assume Node globals exist."
 - `tseslint.configs.recommended` adds the recommended TypeScript rules.
 - `prettier` (the config, last in the list) turns off any earlier rule that conflicts with Prettier.
@@ -281,6 +287,7 @@ Then add to `package.json`:
 ```
 
 **Plain English:**
+
 - Every time you run `git commit`, Husky runs the pre-commit hook.
 - The hook runs `lint-staged`.
 - `lint-staged` looks at only the **staged** files matching `src/**/*.ts`, runs Prettier on them (auto-fixes formatting), then ESLint (auto-fixes what it can).
@@ -340,16 +347,16 @@ Because we set `"type": "module"` and `module: "nodenext"`. Native ESM in Node r
 
 ```ts
 // In src/services/mediaService.ts
-import { Media } from "../models/media.js";   // ✅ correct
-import { Media } from "../models/media";      // ❌ won't work in compiled output
-import { Media } from "../models/media.ts";   // ❌ TypeScript hates this in prod tsconfig
+import { Media } from "../models/media.js"; // ✅ correct
+import { Media } from "../models/media"; // ❌ won't work in compiled output
+import { Media } from "../models/media.ts"; // ❌ TypeScript hates this in prod tsconfig
 ```
 
 It feels weird the first day. After that it's invisible.
 
 ### "What's the difference between `dependencies` and `devDependencies`?"
 
-- **dependencies** — packages your *running app* needs. (Express, Mongoose, Zod.)
+- **dependencies** — packages your _running app_ needs. (Express, Mongoose, Zod.)
 - **devDependencies** — packages used during development, building, or testing only. (TypeScript, ESLint, Prettier, all `@types/*` packages.)
 
 If you'd deploy to a server, run `yarn install --production` there and only `dependencies` get installed.
@@ -361,6 +368,7 @@ You forgot to add `eslint-config-prettier` to your ESLint config, or you put it 
 ### "My pre-commit hook does nothing"
 
 Common causes:
+
 1. You didn't run `yarn husky install` (or the `prepare` script didn't run on install).
 2. The hook file (`.husky/pre-commit`) doesn't have execute permission on Mac/Linux. Run `chmod +x .husky/pre-commit`.
 3. Your `lint-staged` config doesn't match any files (check the glob pattern).
@@ -407,6 +415,7 @@ mkdir src
 ```
 
 Then create these files by hand (templates above):
+
 - `tsconfig.json` and `tsconfig.dev.json`
 - `eslint.config.js`
 - `.prettierrc`, `.prettierignore`
@@ -422,16 +431,16 @@ That's the whole setup. Once you've done it twice, it takes about 15 minutes.
 
 ## Part 5 — When something breaks, check this first
 
-| Symptom | Likely cause |
-|---|---|
-| `Cannot find module './foo'` at runtime | Missing `.js` extension on the import |
-| `Cannot use import statement outside a module` | Forgot `"type": "module"` in package.json |
-| ESLint and Prettier disagree | `eslint-config-prettier` missing or not last in extends |
-| Pre-commit hook runs nothing | Husky not installed, or `lint-staged` glob doesn't match |
-| `tsc` writes files to `dist/src/...` instead of `dist/...` | `rootDir` is missing from tsconfig |
-| TypeScript error about `process` not defined | Missing `@types/node` or `types: ["node"]` in tsconfig |
-| `import type` errors after refactor | `verbatimModuleSyntax` is on — you must use `import type` for type-only imports |
-| Random files getting compiled | Missing `include` field in tsconfig |
+| Symptom                                                    | Likely cause                                                                    |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `Cannot find module './foo'` at runtime                    | Missing `.js` extension on the import                                           |
+| `Cannot use import statement outside a module`             | Forgot `"type": "module"` in package.json                                       |
+| ESLint and Prettier disagree                               | `eslint-config-prettier` missing or not last in extends                         |
+| Pre-commit hook runs nothing                               | Husky not installed, or `lint-staged` glob doesn't match                        |
+| `tsc` writes files to `dist/src/...` instead of `dist/...` | `rootDir` is missing from tsconfig                                              |
+| TypeScript error about `process` not defined               | Missing `@types/node` or `types: ["node"]` in tsconfig                          |
+| `import type` errors after refactor                        | `verbatimModuleSyntax` is on — you must use `import type` for type-only imports |
+| Random files getting compiled                              | Missing `include` field in tsconfig                                             |
 
 ---
 
