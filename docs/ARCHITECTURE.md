@@ -101,15 +101,15 @@ Every response — success or error — follows the same shape. The frontend nev
 
 ```json
 {
-  "status": "error",
-  "message": "Validation failed",
-  "details": [
-    { "field": "title", "message": "title is required" },
-    {
-      "field": "category",
-      "message": "category must be one of image, document"
-    }
-  ]
+    "status": "error",
+    "message": "Validation failed",
+    "details": [
+        { "field": "title", "message": "title is required" },
+        {
+            "field": "category",
+            "message": "category must be one of image, document"
+        }
+    ]
 }
 ```
 
@@ -166,7 +166,7 @@ A one-line wrapper so controllers don't need `try/catch`:
 
 ```ts
 export const catchAsync = (fn) => (req, res, next) =>
-  Promise.resolve(fn(req, res, next)).catch(next);
+    Promise.resolve(fn(req, res, next)).catch(next);
 ```
 
 Used like:
@@ -213,9 +213,9 @@ A `User` document holds `email`, `passwordHash`, `createdAt`. Passwords are hash
 
 ### Endpoints
 
-- `POST /auth/register` — create a user, return a JWT.
-- `POST /auth/login` — verify password, return a JWT.
-- `GET /auth/me` — return the current user (requires token).
+- `POST /api/v1/auth/register` — create a user, return a JWT.
+- `POST /api/v1/auth/login` — verify password, return a JWT.
+- `GET /api/v1/auth/me` — return the current user (requires token).
 
 ### JWT
 
@@ -248,8 +248,8 @@ The repository runs the count and the page of results **concurrently** with `Pro
 
 ```ts
 const [total, results] = await Promise.all([
-  Media.countDocuments(filter),
-  Media.find(filter).sort(sort).skip(skip).limit(limit),
+    Media.countDocuments(filter),
+    Media.find(filter).sort(sort).skip(skip).limit(limit),
 ]);
 ```
 
@@ -313,14 +313,14 @@ This is the order we will write the code. Each step leaves the app runnable, so 
 
 | Method | Path             | Auth | Purpose                                 |
 | ------ | ---------------- | ---- | --------------------------------------- |
-| POST   | `/auth/register` | —    | Create an account, return JWT           |
-| POST   | `/auth/login`    | —    | Log in, return JWT                      |
-| GET    | `/auth/me`       | ✅   | Current user info                       |
-| POST   | `/media`         | ✅   | Upload one file + metadata              |
-| GET    | `/media`         | ✅   | List own media (filter/search/paginate) |
-| GET    | `/media/:id`     | ✅   | Get one media item (owner only)         |
-| PUT    | `/media/:id`     | ✅   | Update metadata (owner only)            |
-| DELETE | `/media/:id`     | ✅   | Delete media + file (owner only)        |
+| POST   | `/api/v1/auth/register` | —    | Create an account, return JWT           |
+| POST   | `/api/v1/auth/login`    | —    | Log in, return JWT                      |
+| GET    | `/api/v1/auth/me`       | ✅   | Current user info                       |
+| POST   | `/api/v1/media`         | ✅   | Upload one file + metadata              |
+| GET    | `/api/v1/media`         | ✅   | List own media (filter/search/paginate) |
+| GET    | `/api/v1/media/:id`     | ✅   | Get one media item (owner only)         |
+| PUT    | `/api/v1/media/:id`     | ✅   | Update metadata (owner only)            |
+| DELETE | `/api/v1/media/:id`     | ✅   | Delete media + file (owner only)        |
 | GET    | `/health`        | —    | Liveness probe                          |
 
 ---

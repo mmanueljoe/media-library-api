@@ -85,27 +85,27 @@ That generates a default config. Replace it with this minimal modern setup:
 
 ```json
 {
-  "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "module": "nodenext",
-    "target": "esnext",
-    "types": ["node"],
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "strict": true,
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true,
-    "noEmit": false
-  },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+    "compilerOptions": {
+        "rootDir": "./src",
+        "outDir": "./dist",
+        "module": "nodenext",
+        "target": "esnext",
+        "types": ["node"],
+        "sourceMap": true,
+        "declaration": true,
+        "declarationMap": true,
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
+        "strict": true,
+        "verbatimModuleSyntax": true,
+        "isolatedModules": true,
+        "noUncheckedSideEffectImports": true,
+        "moduleDetection": "force",
+        "skipLibCheck": true,
+        "noEmit": false
+    },
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules", "dist"]
 }
 ```
 
@@ -128,11 +128,11 @@ Create `tsconfig.dev.json`:
 
 ```json
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "allowImportingTsExtensions": true,
+        "noEmit": true
+    }
 }
 ```
 
@@ -194,14 +194,14 @@ import { defineConfig } from "eslint/config";
 import prettier from "eslint-config-prettier";
 
 export default defineConfig([
-  {
-    files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
-    plugins: { js },
-    extends: ["js/recommended"],
-    languageOptions: { globals: globals.node },
-  },
-  tseslint.configs.recommended,
-  prettier,
+    {
+        files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
+        plugins: { js },
+        extends: ["js/recommended"],
+        languageOptions: { globals: globals.node },
+    },
+    tseslint.configs.recommended,
+    prettier,
 ]);
 ```
 
@@ -217,11 +217,11 @@ export default defineConfig([
 
 ```json
 {
-  "semi": true,
-  "trailingComma": "es5",
-  "singleQuote": false,
-  "tabWidth": 2,
-  "printWidth": 80
+    "semi": true,
+    "trailingComma": "es5",
+    "singleQuote": false,
+    "tabWidth": 2,
+    "printWidth": 80
 }
 ```
 
