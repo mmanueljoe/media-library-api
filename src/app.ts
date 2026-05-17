@@ -1,5 +1,6 @@
 import express from "express";
 import { errorHandler } from "./middlewares/errorHandler.js";
+import { requestLogger } from "./middlewares/requestLogger.js";
 import { AppError } from "./utils/AppError.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { mediaRouter } from "./routes/media.routes.js";
@@ -8,6 +9,7 @@ import { healthRouter } from "./routes/health.routes.js";
 const app = express();
 
 app.use(express.json());
+app.use(requestLogger);
 
 app.use("/health", healthRouter);
 app.use("/api/v1/auth", authRouter);

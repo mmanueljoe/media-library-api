@@ -22,6 +22,17 @@ export const createMedia = async (input: {
 }) => {
     const media = await createMediaRepository(input);
 
+    logger.info(
+        {
+            mediaId: media._id.toString(),
+            ownerId: input.ownerId,
+            originalName: input.originalName,
+            mimeType: input.mimeType,
+            size: input.size,
+        },
+        "file uploaded successfully"
+    );
+
     return media;
 };
 

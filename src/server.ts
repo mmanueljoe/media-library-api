@@ -7,8 +7,7 @@ const start = async (): Promise<void> => {
     await connectDB();
 
     app.listen(env.PORT, () => {
-        logger.info(`Server running on port ${env.PORT}`);
-        console.log(`Server running on port ${env.PORT}`);
+        logger.info({ port: env.PORT }, "server started");
     });
 };
 
