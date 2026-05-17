@@ -1,8 +1,9 @@
 import multer from "multer";
+import { env } from "../config/env.js";
 
 const storage = multer.diskStorage({
     destination: (_req, _file, cb) => {
-        cb(null, "uploads/");
+        cb(null, `${env.UPLOAD_DIR}/`);
     },
     filename: (_req, file, cb) => {
         cb(null, Date.now() + "-" + file.originalname);
@@ -23,7 +24,7 @@ const fileFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
 };
 
 const limits = {
-    fileSize: 1024 * 1024 * 5,
+    fileSize: 1024 * 1024 * env.MAX_FILE_SIZE_MB,
 };
 
 export const upload = multer({ storage, limits, fileFilter });
