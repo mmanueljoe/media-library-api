@@ -4,6 +4,9 @@
     "main": "dist/server.js",
     "type": "module",
     "license": "MIT",
+    "engines": {
+        "node": ">=22.22.1"
+    },
     "dependencies": {
         "bcrypt": "^6.0.0",
         "cloudinary": "^2.10.0",
