@@ -16,7 +16,7 @@ export const uploadMedia = catchAsync(async (req: Request, res: Response) => {
     if (!req.file) throw new AppError("File is required", 400);
 
     const { title, tags, category } = req.body;
-    const filePath = req.file!.path;
+    const buffer = req.file!.buffer;
     const originalName = req.file!.originalname;
     const mimeType = req.file!.mimetype;
     const size = req.file!.size;
@@ -26,7 +26,7 @@ export const uploadMedia = catchAsync(async (req: Request, res: Response) => {
         title,
         tags,
         category,
-        filePath,
+        buffer,
         originalName,
         mimeType,
         size,

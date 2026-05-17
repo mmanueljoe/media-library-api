@@ -1,14 +1,7 @@
 import multer from "multer";
 import { env } from "../config/env.js";
 
-const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => {
-        cb(null, `${env.UPLOAD_DIR}/`);
-    },
-    filename: (_req, file, cb) => {
-        cb(null, Date.now() + "-" + file.originalname);
-    },
-});
+const storage = multer.memoryStorage();
 
 const allowedMimeTypes = ["image/jpeg", "image/png", "application/pdf"];
 

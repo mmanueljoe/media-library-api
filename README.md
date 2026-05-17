@@ -2,7 +2,7 @@
 
 A RESTful backend for a content team to upload, organize, search, and manage media files (images and PDFs). Each user owns their own media — only the uploader can edit or delete their files.
 
-Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer for file uploads.
+Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer + Cloudinary for file uploads.
 
 > For the full architectural design, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 > For a plain-English explanation of the project tooling (TypeScript, ESLint, Prettier, Husky), see [`docs/SETUP_GUIDE.md`](docs/SETUP_GUIDE.md).
@@ -33,7 +33,7 @@ Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer for f
 | Database     | MongoDB               |
 | ODM          | Mongoose              |
 | Validation   | Zod                   |
-| File uploads | Multer                |
+| File uploads | Multer (memory) + Cloudinary |
 | Auth         | bcrypt + jsonwebtoken |
 | Logging      | Pino + pino-pretty    |
 | Env loading  | dotenv                |
@@ -98,7 +98,7 @@ All vars are loaded from `.env.<NODE_ENV>` at boot (so `.env.development`, `.env
 | `JWT_SECRET`            | **yes**  | —             | Secret for signing JWTs. Minimum 16 characters. Use a long random string in production. |
 | `JWT_EXPIRES_IN`        | no       | `7d`          | Token lifetime (e.g. `1h`, `7d`, `30d`).                                                |
 | `MAX_FILE_SIZE_MB`      | no       | `5`           | Max upload size in megabytes (enforced by Multer).                                      |
-| `UPLOAD_DIR`            | no       | `uploads`     | Directory Multer writes to (local-disk mode).                                           |
+| `UPLOAD_DIR`            | no       | `uploads`     | Reserved for local-disk fallback. Not used in the Cloudinary code path.                 |
 | `LOG_LEVEL`             | no       | `info`        | Pino log level: `debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`.          |
 | `CLOUDINARY_CLOUD_NAME` | no\*     | —             | Cloudinary cloud name. Required from step 4 (Cloudinary migration) onward.              |
 | `CLOUDINARY_API_KEY`    | no\*     | —             | Cloudinary API key. Required from step 4 onward.                                        |
@@ -113,9 +113,8 @@ See [`.env.example`](.env.example) for a copy-paste template.
 ```
 media-library-api/
 ├── docs/                       Architectural and setup documentation
-├── uploads/                    Local storage for uploaded files (git-ignored)
 ├── src/
-│   ├── config/                 env loading, logger, db connection
+│   ├── config/                 env loading, logger, db, cloudinary
 │   ├── routes/                 URL → controller wiring (no logic)
 │   ├── controllers/            Request/response handling (delegates to services)
 │   ├── services/               Business rules and orchestration
@@ -200,7 +199,7 @@ All `/media` endpoints require a valid JWT in the `Authorization: Bearer <token>
 | `GET`    | `/media`     | List your media with filters, search, and pagination.                                       |
 | `GET`    | `/media/:id` | Get a single media item (owner only).                                                       |
 | `PUT`    | `/media/:id` | Update metadata (owner only).                                                               |
-| `DELETE` | `/media/:id` | Delete the media item and its file from disk (owner only).                                  |
+| `DELETE` | `/media/:id` | Delete the media item and its asset from Cloudinary (owner only).                            |
 
 ### Health
 
