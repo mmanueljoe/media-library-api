@@ -8,7 +8,8 @@ export type CreateMediaInput = {
     title: string;
     tags?: string[];
     category: "image" | "document";
-    filePath: string;
+    url: string;
+    publicId: string;
     originalName: string;
     mimeType: string;
     size: number;
