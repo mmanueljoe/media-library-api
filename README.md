@@ -58,10 +58,11 @@ Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer for f
 # 1. Install dependencies
 yarn install
 
-# 2. Create your local env file from the template
-cp .env.example .env
+# 2. Create your local env files from the template
+cp .env.example .env.development
+cp .env.example .env.test
 
-# 3. Edit .env and fill in real values (especially MONGO_URI and JWT_SECRET)
+# 3. Edit .env.development (and .env.test) and fill in real values (especially DATABASE_URL and JWT_SECRET)
 
 # 4. Start the dev server
 yarn dev
@@ -87,16 +88,21 @@ The server starts on `http://localhost:3000` (or whatever `PORT` you set).
 
 ## Environment variables
 
-All vars are loaded from `.env` at boot and validated by Zod. The app refuses to start if any required var is missing or malformed.
+All vars are loaded from `.env.<NODE_ENV>` at boot (so `.env.development`, `.env.test`, etc.) and validated by Zod. The app refuses to start if any required var is missing or malformed. In production on Vercel, vars are injected by the platform — no file is read.
 
-| Variable         | Required | Default       | Description                                                                             |
-| ---------------- | -------- | ------------- | --------------------------------------------------------------------------------------- |
-| `NODE_ENV`       | no       | `development` | One of `development` \| `production` \| `test`.                                         |
-| `PORT`           | no       | `3000`        | Port the HTTP server listens on.                                                        |
-| `MONGO_URI`      | **yes**  | —             | MongoDB connection string (local or Atlas).                                             |
-| `JWT_SECRET`     | **yes**  | —             | Secret for signing JWTs. Minimum 16 characters. Use a long random string in production. |
-| `JWT_EXPIRES_IN` | no       | `7d`          | Token lifetime (e.g. `1h`, `7d`, `30d`).                                                |
-| `LOG_LEVEL`      | no       | `info`        | Pino log level: `debug` \| `info` \| `warn` \| `error` \| `fatal`.                      |
+| Variable                | Required | Default       | Description                                                                             |
+| ----------------------- | -------- | ------------- | --------------------------------------------------------------------------------------- |
+| `NODE_ENV`              | no       | `development` | One of `development` \| `production` \| `test`. Also picks which `.env.*` file loads.   |
+| `PORT`                  | no       | `3000`        | Port the HTTP server listens on.                                                        |
+| `DATABASE_URL`          | **yes**  | —             | MongoDB connection string (local or Atlas).                                             |
+| `JWT_SECRET`            | **yes**  | —             | Secret for signing JWTs. Minimum 16 characters. Use a long random string in production. |
+| `JWT_EXPIRES_IN`        | no       | `7d`          | Token lifetime (e.g. `1h`, `7d`, `30d`).                                                |
+| `MAX_FILE_SIZE_MB`      | no       | `5`           | Max upload size in megabytes (enforced by Multer).                                      |
+| `UPLOAD_DIR`            | no       | `uploads`     | Directory Multer writes to (local-disk mode).                                           |
+| `LOG_LEVEL`             | no       | `info`        | Pino log level: `debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`.          |
+| `CLOUDINARY_CLOUD_NAME` | no\*     | —             | Cloudinary cloud name. Required from step 4 (Cloudinary migration) onward.              |
+| `CLOUDINARY_API_KEY`    | no\*     | —             | Cloudinary API key. Required from step 4 onward.                                        |
+| `CLOUDINARY_API_SECRET` | no\*     | —             | Cloudinary API secret. Required from step 4 onward.                                     |
 
 See [`.env.example`](.env.example) for a copy-paste template.
 
