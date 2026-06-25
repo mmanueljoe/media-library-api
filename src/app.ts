@@ -7,6 +7,7 @@ import { mediaRouter } from "./routes/media.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
 
 const app = express();
+app.disable("x-powered-by");
 
 app.use(express.json());
 app.use(requestLogger);
