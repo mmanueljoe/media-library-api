@@ -2,7 +2,7 @@
 
 A RESTful backend for a content team to upload, organize, search, and manage media files (images and PDFs). Each user owns their own media — only the uploader can edit or delete their files.
 
-Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer for file uploads.
+Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer + Cloudinary for file uploads.
 
 > For the full architectural design, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 > For a plain-English explanation of the project tooling (TypeScript, ESLint, Prettier, Husky), see [`docs/SETUP_GUIDE.md`](docs/SETUP_GUIDE.md).
@@ -33,7 +33,7 @@ Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer for f
 | Database     | MongoDB               |
 | ODM          | Mongoose              |
 | Validation   | Zod                   |
-| File uploads | Multer                |
+| File uploads | Multer (memory) + Cloudinary |
 | Auth         | bcrypt + jsonwebtoken |
 | Logging      | Pino + pino-pretty    |
 | Env loading  | dotenv                |
@@ -58,10 +58,11 @@ Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer for f
 # 1. Install dependencies
 yarn install
 
-# 2. Create your local env file from the template
-cp .env.example .env
+# 2. Create your local env files from the template
+cp .env.example .env.development
+cp .env.example .env.test
 
-# 3. Edit .env and fill in real values (especially MONGO_URI and JWT_SECRET)
+# 3. Edit .env.development (and .env.test) and fill in real values (especially DATABASE_URL and JWT_SECRET)
 
 # 4. Start the dev server
 yarn dev
@@ -87,16 +88,21 @@ The server starts on `http://localhost:3000` (or whatever `PORT` you set).
 
 ## Environment variables
 
-All vars are loaded from `.env` at boot and validated by Zod. The app refuses to start if any required var is missing or malformed.
+All vars are loaded from `.env.<NODE_ENV>` at boot (so `.env.development`, `.env.test`, etc.) and validated by Zod. The app refuses to start if any required var is missing or malformed. In production on Vercel, vars are injected by the platform — no file is read.
 
-| Variable         | Required | Default       | Description                                                                             |
-| ---------------- | -------- | ------------- | --------------------------------------------------------------------------------------- |
-| `NODE_ENV`       | no       | `development` | One of `development` \| `production` \| `test`.                                         |
-| `PORT`           | no       | `3000`        | Port the HTTP server listens on.                                                        |
-| `MONGO_URI`      | **yes**  | —             | MongoDB connection string (local or Atlas).                                             |
-| `JWT_SECRET`     | **yes**  | —             | Secret for signing JWTs. Minimum 16 characters. Use a long random string in production. |
-| `JWT_EXPIRES_IN` | no       | `7d`          | Token lifetime (e.g. `1h`, `7d`, `30d`).                                                |
-| `LOG_LEVEL`      | no       | `info`        | Pino log level: `debug` \| `info` \| `warn` \| `error` \| `fatal`.                      |
+| Variable                | Required | Default       | Description                                                                             |
+| ----------------------- | -------- | ------------- | --------------------------------------------------------------------------------------- |
+| `NODE_ENV`              | no       | `development` | One of `development` \| `production` \| `test`. Also picks which `.env.*` file loads.   |
+| `PORT`                  | no       | `3000`        | Port the HTTP server listens on.                                                        |
+| `DATABASE_URL`          | **yes**  | —             | MongoDB connection string (local or Atlas).                                             |
+| `JWT_SECRET`            | **yes**  | —             | Secret for signing JWTs. Minimum 16 characters. Use a long random string in production. |
+| `JWT_EXPIRES_IN`        | no       | `7d`          | Token lifetime (e.g. `1h`, `7d`, `30d`).                                                |
+| `MAX_FILE_SIZE_MB`      | no       | `5`           | Max upload size in megabytes (enforced by Multer).                                      |
+| `UPLOAD_DIR`            | no       | `uploads`     | Reserved for local-disk fallback. Not used in the Cloudinary code path.                 |
+| `LOG_LEVEL`             | no       | `info`        | Pino log level: `debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`.          |
+| `CLOUDINARY_CLOUD_NAME` | no\*     | —             | Cloudinary cloud name. Required from step 4 (Cloudinary migration) onward.              |
+| `CLOUDINARY_API_KEY`    | no\*     | —             | Cloudinary API key. Required from step 4 onward.                                        |
+| `CLOUDINARY_API_SECRET` | no\*     | —             | Cloudinary API secret. Required from step 4 onward.                                     |
 
 See [`.env.example`](.env.example) for a copy-paste template.
 
@@ -107,9 +113,8 @@ See [`.env.example`](.env.example) for a copy-paste template.
 ```
 media-library-api/
 ├── docs/                       Architectural and setup documentation
-├── uploads/                    Local storage for uploaded files (git-ignored)
 ├── src/
-│   ├── config/                 env loading, logger, db connection
+│   ├── config/                 env loading, logger, db, cloudinary
 │   ├── routes/                 URL → controller wiring (no logic)
 │   ├── controllers/            Request/response handling (delegates to services)
 │   ├── services/               Business rules and orchestration
@@ -194,7 +199,7 @@ All `/media` endpoints require a valid JWT in the `Authorization: Bearer <token>
 | `GET`    | `/media`     | List your media with filters, search, and pagination.                                       |
 | `GET`    | `/media/:id` | Get a single media item (owner only).                                                       |
 | `PUT`    | `/media/:id` | Update metadata (owner only).                                                               |
-| `DELETE` | `/media/:id` | Delete the media item and its file from disk (owner only).                                  |
+| `DELETE` | `/media/:id` | Delete the media item and its asset from Cloudinary (owner only).                            |
 
 ### Health
 

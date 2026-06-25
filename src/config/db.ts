@@ -3,6 +3,6 @@ import { env } from "./env.js";
 import { logger } from "./logger.js";
 
 export const connectDB = async (): Promise<void> => {
-    await mongoose.connect(env.MONGO_URI);
+    await mongoose.connect(env.DATABASE_URL);
     logger.info("Connected to MongoDB");
 };
