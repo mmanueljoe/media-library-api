@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
 import { sendSuccess } from "./utils/response.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { AppError } from "./utils/AppError.js";
@@ -23,8 +24,14 @@ const limiter = rateLimit({
 });
 app.use("/api/v1", limiter);
 
-app.get("/health", (_req, res) => {
-    sendSuccess(res, { status: "ok" });
+app.get("/health", async (_req, res) => {
+    const dbState = mongoose.connection.readyState;
+    const dbOk = dbState === 1;
+    const status = dbOk ? 200 : 503;
+    res.status(status).json({
+        status: dbOk ? "ok" : "error",
+        db: dbOk ? "connected" : "disconnected",
+    });
 });
 
 app.use("/api/v1/auth", authRouter);
