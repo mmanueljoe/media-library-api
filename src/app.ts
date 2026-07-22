@@ -3,7 +3,6 @@ import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
-import { sendSuccess } from "./utils/response.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { AppError } from "./utils/AppError.js";
 import { authRouter } from "./routes/auth.routes.js";
