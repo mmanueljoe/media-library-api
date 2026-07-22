@@ -180,14 +180,14 @@ describe("GET /api/v1/media/:id", () => {
     });
 });
 
-describe("PUT /api/v1/media/:id", () => {
+describe("PATCH /api/v1/media/:id", () => {
     it("updates the title", async () => {
         const token = await registerUser("updater@test.local");
         const upload = await uploadOne(token, { title: "old title" });
         const id = upload.body.data._id;
 
         const res = await api()
-            .put(`/api/v1/media/${id}`)
+            .patch(`/api/v1/media/${id}`)
             .set(authHeader(token))
             .send({ title: "new title" });
 
@@ -201,7 +201,7 @@ describe("PUT /api/v1/media/:id", () => {
         const id = upload.body.data._id;
 
         const res = await api()
-            .put(`/api/v1/media/${id}`)
+            .patch(`/api/v1/media/${id}`)
             .set(authHeader(token))
             .send({});
 
@@ -215,7 +215,7 @@ describe("PUT /api/v1/media/:id", () => {
         const id = upload.body.data._id;
 
         const res = await api()
-            .put(`/api/v1/media/${id}`)
+            .patch(`/api/v1/media/${id}`)
             .set(authHeader(tokenB))
             .send({ title: "hijack" });
 
