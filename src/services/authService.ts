@@ -6,12 +6,13 @@ import { type UserDoc } from "@/models/user.js";
 import bcrypt from "bcrypt";
 
 export const register = async (email: string, password: string) => {
-    const user = await findUserByEmail(email);
+    const normalizedEmail = email.toLowerCase();
+    const user = await findUserByEmail(normalizedEmail);
 
     if (user) throw new AppError("User already exists", 400);
 
     const newUser: UserDoc = await createUser({
-        email,
+        email: normalizedEmail,
         passwordHash: password,
     });
 
@@ -29,7 +30,8 @@ export const register = async (email: string, password: string) => {
 };
 
 export const login = async (email: string, password: string) => {
-    const user = await findUserByEmail(email);
+    const normalizedEmail = email.toLowerCase();
+    const user = await findUserByEmail(normalizedEmail);
 
     if (!user) throw new AppError("Invalid credentials", 401);
 
