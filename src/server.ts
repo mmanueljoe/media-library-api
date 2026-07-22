@@ -1,12 +1,25 @@
 import app from "./app.js";
 import { env, logger, connectDB } from "@/config/index.js";
+import mongoose from "mongoose";
 
 const start = async (): Promise<void> => {
     await connectDB();
 
-    app.listen(env.PORT, () => {
+    const server = app.listen(env.PORT, () => {
         logger.info({ port: env.PORT }, "server started");
     });
+
+    const shutdown = async (signal: string) => {
+        logger.info(`${signal} received — shutting down gracefully`);
+        server.close(async () => {
+            await mongoose.disconnect();
+            logger.info("Server stopped");
+            process.exit(0);
+        });
+    };
+
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
 process.on("unhandledRejection", (err: unknown) => {
