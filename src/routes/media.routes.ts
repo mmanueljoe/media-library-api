@@ -30,6 +30,6 @@ mediaRouter.get("/:id", authenticate, validate(getMediaByIdSchema), getMediaById
 
 mediaRouter.delete("/:id", authenticate, validate(getMediaByIdSchema), deleteMedia);
 
-mediaRouter.put("/:id", authenticate, validate(updateMediaSchema), updateMedia);
+mediaRouter.patch("/:id", authenticate, validate(updateMediaSchema), updateMedia);
 
 export { mediaRouter };
