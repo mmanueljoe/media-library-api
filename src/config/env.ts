@@ -12,7 +12,6 @@ const envSchema = z.object({
     JWT_SECRET: z.string().min(16),
     JWT_EXPIRES_IN: z.string().min(1).default("7d"),
     MAX_FILE_SIZE_MB: z.coerce.number().positive().default(5),
-    UPLOAD_DIR: z.string().min(1).default("uploads"),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "fatal", "silent"]).default("info"),
     CLOUDINARY_CLOUD_NAME: z.string().min(1),
     CLOUDINARY_API_KEY: z.string().min(1),
