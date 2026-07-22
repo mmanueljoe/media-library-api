@@ -21,4 +21,4 @@ process.on("uncaughtException", (err: unknown) => {
     process.exit(1);
 });
 
-start();
+await start();

@@ -1,5 +1,9 @@
 import { User, type UserDoc } from "../models/user.js";
-import { type CreateUserInput } from "../types/types.js";
+
+type CreateUserInput = {
+    email: string;
+    passwordHash: string;
+};
 
 export const createUser = async (data: CreateUserInput): Promise<UserDoc> => {
     return await User.create(data);

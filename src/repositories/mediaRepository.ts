@@ -1,5 +1,16 @@
 import { Media, type MediaDoc } from "../models/media.js";
-import { type CreateMediaInput } from "../types/types.js";
+
+type CreateMediaInput = {
+    ownerId: string;
+    title: string;
+    tags?: string[];
+    category: "image" | "document";
+    url: string;
+    publicId: string;
+    originalName: string;
+    mimeType: string;
+    size: number;
+};
 
 export const createMedia = async (data: CreateMediaInput): Promise<MediaDoc> => {
     return await Media.create(data);

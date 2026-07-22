@@ -6,13 +6,13 @@ import {
     getMediaById,
     updateMedia,
     uploadMedia,
+    getMyMedia,
 } from "../controllers/mediaController.js";
 import { createMediaSchema } from "../middlewares/validators/mediaValidator.js";
 import { listMediaSchema } from "../middlewares/validators/mediaValidator.js";
 import { getMediaByIdSchema } from "../middlewares/validators/mediaValidator.js";
 import { updateMediaSchema } from "../middlewares/validators/mediaValidator.js";
 import { validate } from "../middlewares/validate.js";
-import { getMyMedia } from "../controllers/mediaController.js";
 
 const mediaRouter = Router();
 
