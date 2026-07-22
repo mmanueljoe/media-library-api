@@ -12,7 +12,7 @@ const fileFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
         cb(null, true);
     } else {
         (cb as unknown as (error: Error | null, acceptFile: boolean) => void)(
-            new Error("Invalid file type"),
+            new Error(`Invalid file type. Allowed: ${[...allowedMimeTypes].join(", ")}`),
             false
         );
     }
