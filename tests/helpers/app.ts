@@ -1,5 +1,5 @@
 import request from "supertest";
-import app from "../../src/app.js";
+import app from "@/app.js";
 
 export const api = (): request.Agent => request(app);
 

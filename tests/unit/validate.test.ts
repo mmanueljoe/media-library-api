@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import { validate } from "../../src/middlewares/validate.js";
-import { AppError } from "../../src/utils/AppError.js";
+import { validate } from "@/middlewares/validate.js";
+import { AppError } from "@/utils/AppError.js";
 
 const callValidate = (
     schemas: Parameters<typeof validate>[0],

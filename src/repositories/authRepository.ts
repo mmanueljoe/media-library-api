@@ -1,4 +1,4 @@
-import { User, type UserDoc } from "../models/user.js";
+import { User, type UserDoc } from "@/models/user.js";
 
 type CreateUserInput = {
     email: string;

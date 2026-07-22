@@ -1,4 +1,4 @@
-import { Media, type MediaDoc } from "../models/media.js";
+import { Media, type MediaDoc } from "@/models/media.js";
 
 type CreateMediaInput = {
     ownerId: string;

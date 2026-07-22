@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AppError } from "../../src/utils/AppError.js";
+import { AppError } from "@/utils/AppError.js";
 
 describe("AppError", () => {
     it("sets message and statusCode from the constructor", () => {

@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodError, type ZodType } from "zod";
-import { AppError } from "../utils/AppError.js";
+import { AppError } from "@/utils/AppError.js";
 
 type Schemas = {
     body?: ZodType;

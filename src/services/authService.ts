@@ -1,8 +1,8 @@
-import { createUser, findUserByEmail, findUserById } from "../repositories/authRepository.js";
+import { createUser, findUserByEmail, findUserById } from "@/repositories/authRepository.js";
 import jwt from "jsonwebtoken";
-import { AppError } from "../utils/AppError.js";
-import { env } from "../config/env.js";
-import { type UserDoc } from "../models/user.js";
+import { AppError } from "@/utils/AppError.js";
+import { env } from "@/config/env.js";
+import { type UserDoc } from "@/models/user.js";
 import bcrypt from "bcrypt";
 
 export const register = async (email: string, password: string) => {

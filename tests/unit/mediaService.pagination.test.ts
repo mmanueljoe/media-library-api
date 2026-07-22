@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("../../src/repositories/mediaRepository.js", () => ({
+vi.mock("@/repositories/mediaRepository.js", () => ({
     createMedia: vi.fn(),
     deleteMediaById: vi.fn(),
     findMediaById: vi.fn(),
@@ -8,8 +8,8 @@ vi.mock("../../src/repositories/mediaRepository.js", () => ({
     updateMediaById: vi.fn(),
 }));
 
-import { findMediaByOwner } from "../../src/repositories/mediaRepository.js";
-import { getMyMedia } from "../../src/services/mediaService.js";
+import { findMediaByOwner } from "@/repositories/mediaRepository.js";
+import { getMyMedia } from "@/services/mediaService.js";
 
 const mockFindMediaByOwner = vi.mocked(findMediaByOwner);
 

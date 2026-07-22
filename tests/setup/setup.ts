@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-vi.mock("../../src/config/cloudinary.js", () => {
+vi.mock("@/config/cloudinary.js", () => {
     type Callback = (
         error: Error | null,
         result?: { secure_url: string; public_id: string }

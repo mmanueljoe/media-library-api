@@ -1,5 +1,5 @@
-import { User, type UserDoc } from "../../src/models/user.js";
-import { Media, type MediaDoc } from "../../src/models/media.js";
+import { User, type UserDoc } from "@/models/user.js";
+import { Media, type MediaDoc } from "@/models/media.js";
 
 type UserOverrides = Partial<{
     email: string;

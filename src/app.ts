@@ -1,10 +1,7 @@
 import express from "express";
-import { errorHandler } from "./middlewares/errorHandler.js";
-import { requestLogger } from "./middlewares/requestLogger.js";
-import { AppError } from "./utils/AppError.js";
-import { authRouter } from "./routes/auth.routes.js";
-import { mediaRouter } from "./routes/media.routes.js";
-import { healthRouter } from "./routes/health.routes.js";
+import { errorHandler, requestLogger } from "@/middlewares/index.js";
+import { AppError } from "@/utils/AppError.js";
+import { authRouter, mediaRouter, healthRouter } from "@/routes/index.js";
 
 const app = express();
 app.disable("x-powered-by");
