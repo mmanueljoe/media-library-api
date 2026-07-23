@@ -1,18 +1,18 @@
 import { Router } from "express";
-import { upload } from "../middlewares/upload.js";
-import { authenticate } from "../middlewares/authenticate.js";
+import { upload, authenticate, validate } from "../middlewares/index.js";
 import {
-    deleteMedia,
-    getMediaById,
-    updateMedia,
     uploadMedia,
-} from "../controllers/mediaController.js";
-import { createMediaSchema } from "../middlewares/validators/mediaValidator.js";
-import { listMediaSchema } from "../middlewares/validators/mediaValidator.js";
-import { getMediaByIdSchema } from "../middlewares/validators/mediaValidator.js";
-import { updateMediaSchema } from "../middlewares/validators/mediaValidator.js";
-import { validate } from "../middlewares/validate.js";
-import { getMyMedia } from "../controllers/mediaController.js";
+    getMyMedia,
+    getMediaById,
+    deleteMedia,
+    updateMedia,
+} from "../controllers/index.js";
+import {
+    createMediaSchema,
+    listMediaSchema,
+    getMediaByIdSchema,
+    updateMediaSchema,
+} from "../middlewares/validators/index.js";
 
 const mediaRouter = Router();
 

@@ -1,14 +1,14 @@
 import { unlink } from "node:fs/promises";
 
-import { logger } from "../config/logger.js";
-import { AppError } from "../utils/AppError.js";
+import { logger } from "../config/index.js";
+import { AppError } from "../utils/index.js";
 import {
     createMedia as createMediaRepository,
     deleteMediaById as deleteMediaByIdRepository,
     findMediaById as findMediaByIdRepository,
     findMediaByOwner as findMediaByOwnerRepository,
     updateMediaById as updateMediaByIdRepository,
-} from "../repositories/mediaRepository.js";
+} from "../repositories/index.js";
 
 export const createMedia = async (input: {
     ownerId: string;

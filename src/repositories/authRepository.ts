@@ -1,4 +1,4 @@
-import { User, type UserDoc } from "../models/user.js";
+import { User, type UserDoc } from "../models/index.js";
 import { type CreateUserInput } from "../types/types.js";
 
 export const createUser = async (data: CreateUserInput): Promise<UserDoc> => {
