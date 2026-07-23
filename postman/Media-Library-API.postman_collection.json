@@ -1,0 +1,319 @@
+{
+    "info": {
+        "name": "Media Library API",
+        "description": "Exercise every endpoint of the Media Library API against any environment.\n\n**How it chains together**\n- `Register` and `Login` automatically set `{{TOKEN}}` in the active environment.\n- `Upload Media` automatically sets `{{MEDIA_ID}}`.\n- Every protected request reads `{{TOKEN}}` from the environment and `{{MEDIA_ID}}` from the path. You never type a token or id by hand.\n\n**To run the full collection**\n1. Pick an environment (Development or Production).\n2. Open `Upload Media`, click the `Body` tab, click `Select Files` next to the `file` key, and attach any small PNG or PDF (< 5 MB). Postman cannot persist file bindings in collection JSON, so this is the one manual step.\n3. Run `Login` to stash a token (or `Register` first if no user exists).\n4. Run `Upload Media` to populate `{{MEDIA_ID}}`.\n5. Run the rest in any order — they all use the cached token + id.\n\n**Negative cases** are covered by the Vitest integration suite, not this collection.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{TOKEN}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Register",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('envelope is success', () => pm.expect(body.status).to.eql('success'));",
+                                    "pm.test('returns token', () => pm.expect(body.data.token).to.be.a('string'));",
+                                    "pm.test('returns user with email', () => pm.expect(body.data.user.email).to.be.a('string'));",
+                                    "pm.environment.set('TOKEN', body.data.token);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": { "type": "noauth" },
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"demo@test.local\",\n  \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/auth/register",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["auth", "register"]
+                        }
+                    }
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('envelope is success', () => pm.expect(body.status).to.eql('success'));",
+                                    "pm.test('returns token', () => pm.expect(body.data.token).to.be.a('string'));",
+                                    "pm.environment.set('TOKEN', body.data.token);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": { "type": "noauth" },
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"demo@test.local\",\n  \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/auth/login",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["auth", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "Me",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('envelope is success', () => pm.expect(body.status).to.eql('success'));",
+                                    "pm.test('returns user', () => pm.expect(body.data.user).to.be.an('object'));",
+                                    "pm.test('user has id', () => pm.expect(body.data.user.id).to.exist);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{BASE_URL}}/auth/me",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["auth", "me"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Media",
+            "item": [
+                {
+                    "name": "Upload Media",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('envelope is success', () => pm.expect(body.status).to.eql('success'));",
+                                    "pm.test('returns media id', () => pm.expect(body.data._id).to.be.a('string'));",
+                                    "pm.test('returns filePath', () => pm.expect(body.data.filePath).to.be.a('string'));",
+                                    "pm.environment.set('MEDIA_ID', body.data._id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                { "key": "title", "value": "Demo upload", "type": "text" },
+                                { "key": "category", "value": "image", "type": "text" },
+                                { "key": "tags", "value": "demo", "type": "text" },
+                                { "key": "file", "type": "file", "src": [] }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/media",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media"]
+                        },
+                        "description": "**Before running:** click `Body`, scroll to the `file` row, and use `Select Files` to attach a PNG, JPEG, or PDF under 5 MB. Postman cannot store file bindings in JSON, so this is the one manual step per fresh import."
+                    }
+                },
+                {
+                    "name": "List Media",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('envelope is success', () => pm.expect(body.status).to.eql('success'));",
+                                    "pm.test('returns results array', () => pm.expect(body.data.results).to.be.an('array'));",
+                                    "pm.test('returns pagination object', () => pm.expect(body.data.pagination).to.be.an('object'));",
+                                    "pm.test('pagination has all four fields', () => {",
+                                    "  const p = body.data.pagination;",
+                                    "  pm.expect(p).to.have.property('total');",
+                                    "  pm.expect(p).to.have.property('page');",
+                                    "  pm.expect(p).to.have.property('limit');",
+                                    "  pm.expect(p).to.have.property('totalPages');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{BASE_URL}}/media?page=1&limit=10",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media"],
+                            "query": [
+                                { "key": "page", "value": "1" },
+                                { "key": "limit", "value": "10" },
+                                { "key": "category", "value": "image", "disabled": true },
+                                { "key": "search", "value": "demo", "disabled": true },
+                                { "key": "tags", "value": "demo,important", "disabled": true },
+                                { "key": "sortBy", "value": "createdAt", "disabled": true },
+                                { "key": "order", "value": "desc", "disabled": true }
+                            ]
+                        },
+                        "description": "Optional query params (disabled by default — enable in the Params tab to test):\n- `category` — `image` or `document`\n- `search` — full-text search on title\n- `tags` — comma-separated\n- `sortBy` — `createdAt` or `title`\n- `order` — `asc` or `desc`"
+                    }
+                },
+                {
+                    "name": "Get Media by ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('envelope is success', () => pm.expect(body.status).to.eql('success'));",
+                                    "pm.test('returns the requested id', () => pm.expect(body.data._id).to.eql(pm.environment.get('MEDIA_ID')));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/{{MEDIA_ID}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "{{MEDIA_ID}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Media",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('envelope is success', () => pm.expect(body.status).to.eql('success'));",
+                                    "pm.test('title was updated', () => pm.expect(body.data.title).to.eql('Updated title'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Updated title\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/{{MEDIA_ID}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "{{MEDIA_ID}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Media",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('envelope is success', () => pm.expect(body.status).to.eql('success'));",
+                                    "pm.test('response echoes the deleted id', () => pm.expect(body.data.id).to.eql(pm.environment.get('MEDIA_ID')));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/{{MEDIA_ID}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "{{MEDIA_ID}}"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Health",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status is 200 or 503', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('has status field', () => pm.expect(body).to.have.property('status'));",
+                                    "pm.test('has db field', () => pm.expect(body).to.have.property('db'));",
+                                    "pm.test('db is connected or disconnected', () => pm.expect(body.db).to.be.oneOf(['connected', 'disconnected']));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": { "type": "noauth" },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{HEALTH_URL}}",
+                            "host": ["{{HEALTH_URL}}"]
+                        },
+                        "description": "Health endpoint is unversioned (no `/api/v1` prefix), so it uses `{{HEALTH_URL}}` rather than `{{BASE_URL}}`."
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        { "key": "BASE_URL", "value": "" },
+        { "key": "HEALTH_URL", "value": "" },
+        { "key": "TOKEN", "value": "" },
+        { "key": "MEDIA_ID", "value": "" }
+    ]
+}

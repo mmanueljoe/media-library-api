@@ -2,11 +2,9 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import mongoose from "mongoose";
-import { errorHandler } from "./middlewares/errorHandler.js";
-import { AppError } from "./utils/AppError.js";
-import { authRouter } from "./routes/auth.routes.js";
-import { mediaRouter } from "./routes/media.routes.js";
+import { errorHandler } from "./middlewares/index.js";
+import { AppError } from "./utils/index.js";
+import { authRouter, mediaRouter, healthRouter } from "./routes/index.js";
 
 const app = express();
 
@@ -23,15 +21,7 @@ const limiter = rateLimit({
 });
 app.use("/api/v1", limiter);
 
-app.get("/health", async (_req, res) => {
-    const dbState = mongoose.connection.readyState;
-    const dbOk = dbState === 1;
-    const status = dbOk ? 200 : 503;
-    res.status(status).json({
-        status: dbOk ? "ok" : "error",
-        db: dbOk ? "connected" : "disconnected",
-    });
-});
+app.use("/health", healthRouter);
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/media", mediaRouter);
