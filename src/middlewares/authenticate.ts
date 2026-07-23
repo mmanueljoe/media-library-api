@@ -13,7 +13,12 @@ export const authenticate = async (
 
     if (!token) return next(new AppError("Unauthorized", 401));
 
-    const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: string };
+    let decoded: { userId: string };
+    try {
+        decoded = jwt.verify(token, env.JWT_SECRET) as { userId: string };
+    } catch {
+        return next(new AppError("Unauthorized", 401));
+    }
 
     if (!decoded.userId) return next(new AppError("Unauthorized", 401));
 

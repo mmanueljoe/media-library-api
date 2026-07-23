@@ -7,6 +7,8 @@ const start = async (): Promise<void> => {
 
     const server = app.listen(env.PORT, () => {
         logger.info(`Server running on port ${env.PORT}`);
+    app.listen(env.PORT, () => {
+        logger.info({ port: env.PORT }, "server started");
     });
 
     const shutdown = async (signal: string) => {
