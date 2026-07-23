@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { upload } from "../middlewares/upload.js";
+import { uploadSingle } from "../middlewares/upload.js";
 import { authenticate } from "../middlewares/authenticate.js";
 import {
     deleteMedia,
@@ -16,13 +16,7 @@ import { getMyMedia } from "../controllers/mediaController.js";
 
 const mediaRouter = Router();
 
-mediaRouter.post(
-    "/",
-    authenticate,
-    validate(createMediaSchema),
-    upload.single("file"),
-    uploadMedia
-);
+mediaRouter.post("/", authenticate, uploadSingle("file"), validate(createMediaSchema), uploadMedia);
 
 mediaRouter.get("/", authenticate, validate(listMediaSchema), getMyMedia);
 
