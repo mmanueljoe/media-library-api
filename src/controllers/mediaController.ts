@@ -1,14 +1,12 @@
 import type { Request, Response } from "express";
-import { catchAsync } from "../utils/catchAsync.js";
+import { catchAsync, sendSuccess, AppError } from "../utils/index.js";
 import {
     createMedia,
     deleteMedia as deleteMediaService,
     getMediaById as getMediaByIdService,
     updateMedia as updateMediaService,
-} from "../services/mediaService.js";
-import { sendSuccess } from "../utils/response.js";
-import { AppError } from "../utils/AppError.js";
-import { getMyMedia as getMyMediaService } from "../services/mediaService.js";
+    getMyMedia as getMyMediaService,
+} from "../services/index.js";
 
 export const uploadMedia = catchAsync(async (req: Request, res: Response) => {
     const ownerId = req.user!.id;

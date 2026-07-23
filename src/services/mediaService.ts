@@ -1,5 +1,7 @@
 import type { UploadApiOptions, UploadApiResponse } from "cloudinary";
 
+import { logger } from "../config/index.js";
+import { AppError } from "../utils/index.js";
 import { logger } from "../config/logger.js";
 import { cloudinary, mimeToResourceType } from "../config/cloudinary.js";
 import { AppError } from "../utils/AppError.js";
@@ -9,7 +11,7 @@ import {
     findMediaById as findMediaByIdRepository,
     findMediaByOwner as findMediaByOwnerRepository,
     updateMediaById as updateMediaByIdRepository,
-} from "../repositories/mediaRepository.js";
+} from "../repositories/index.js";
 
 const CLOUDINARY_FOLDER = "media-library";
 

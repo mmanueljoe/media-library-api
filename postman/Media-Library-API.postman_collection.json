@@ -126,6 +126,7 @@
                                     "const body = pm.response.json();",
                                     "pm.test('envelope is success', () => pm.expect(body.status).to.eql('success'));",
                                     "pm.test('returns media id', () => pm.expect(body.data._id).to.be.a('string'));",
+                                    "pm.test('returns filePath', () => pm.expect(body.data.filePath).to.be.a('string'));",
                                     "pm.test('returns cloudinary url', () => pm.expect(body.data.url).to.match(/^https:\\/\\//));",
                                     "pm.test('returns publicId', () => pm.expect(body.data.publicId).to.be.a('string'));",
                                     "pm.environment.set('MEDIA_ID', body.data._id);"
@@ -238,6 +239,7 @@
                         }
                     ],
                     "request": {
+                        "method": "PATCH",
                         "method": "PUT",
                         "header": [{ "key": "Content-Type", "value": "application/json" }],
                         "body": {
@@ -289,6 +291,11 @@
                             "script": {
                                 "type": "text/javascript",
                                 "exec": [
+                                    "pm.test('status is 200 or 503', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('has status field', () => pm.expect(body).to.have.property('status'));",
+                                    "pm.test('has db field', () => pm.expect(body).to.have.property('db'));",
+                                    "pm.test('db is connected or disconnected', () => pm.expect(body.db).to.be.oneOf(['connected', 'disconnected']));"
                                     "pm.test('status is 200', () => pm.response.to.have.status(200));",
                                     "const body = pm.response.json();",
                                     "pm.test('status is ok', () => pm.expect(body.status).to.eql('ok'));",

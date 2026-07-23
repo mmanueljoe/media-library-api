@@ -1,4 +1,4 @@
-import { Media, type MediaDoc } from "../models/media.js";
+import { Media, type MediaDoc } from "../models/index.js";
 import { type CreateMediaInput } from "../types/types.js";
 
 export const createMedia = async (data: CreateMediaInput): Promise<MediaDoc> => {
