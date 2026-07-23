@@ -21,11 +21,7 @@ const mediaSchema = new mongoose.Schema(
             required: true,
             enum: ["image", "document"],
         },
-        url: {
-            type: String,
-            required: true,
-        },
-        publicId: {
+        filePath: {
             type: String,
             required: true,
         },

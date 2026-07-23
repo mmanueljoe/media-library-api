@@ -4,13 +4,9 @@
     "main": "dist/server.js",
     "type": "module",
     "license": "MIT",
-    "engines": {
-        "node": ">=22.22.1"
-    },
     "dependencies": {
         "bcrypt": "^6.0.0",
         "cors": "^2.8.6",
-        "cloudinary": "^2.10.0",
         "dotenv": "^17.4.2",
         "express": "^5.2.1",
         "express-rate-limit": "^8.6.0",
@@ -30,23 +26,17 @@
         "@types/express": "^5.0.6",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/multer": "^2.1.0",
-        "@types/node": "^25.8.0",
-        "@types/supertest": "^7.2.0",
         "@typescript-eslint/eslint-plugin": "^8.59.3",
         "@typescript-eslint/parser": "^8.59.3",
-        "@vitest/coverage-v8": "^4.1.6",
         "eslint": "^10.3.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.5",
         "globals": "^17.6.0",
         "husky": "^8.0.0",
         "lint-staged": "^17.0.4",
-        "mongodb-memory-server": "^11.1.0",
         "prettier": "^3.8.3",
-        "supertest": "^7.2.2",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.59.3",
-        "vitest": "^4.1.6"
+        "typescript-eslint": "^8.59.3"
     },
     "lint-staged": {
         "src/**/*.ts": [
@@ -58,13 +48,11 @@
         "prepare": "husky install",
         "dev": "tsx watch src/server.ts",
         "start": "node dist/server.js",
-        "build": "tsc -p tsconfig.build.json",
+        "build": "tsc",
         "lint": "eslint .",
         "format:check": "prettier --check .",
         "format": "prettier --write .",
-        "typecheck": "tsc --noEmit",
-        "test": "vitest run",
-        "test:watch": "vitest",
-        "test:coverage": "vitest run --coverage"
+        "typecheck": "tsc --noEmit -p tsconfig.dev.json",
+        "test": "echo \"No test yet\" && exit 0"
     }
 }

@@ -1,10 +1,7 @@
-import type { UploadApiOptions, UploadApiResponse } from "cloudinary";
+import { unlink } from "node:fs/promises";
 
 import { logger } from "../config/index.js";
 import { AppError } from "../utils/index.js";
-import { logger } from "../config/logger.js";
-import { cloudinary, mimeToResourceType } from "../config/cloudinary.js";
-import { AppError } from "../utils/AppError.js";
 import {
     createMedia as createMediaRepository,
     deleteMediaById as deleteMediaByIdRepository,
@@ -13,63 +10,17 @@ import {
     updateMediaById as updateMediaByIdRepository,
 } from "../repositories/index.js";
 
-const CLOUDINARY_FOLDER = "media-library";
-
-const uploadBufferToCloudinary = (
-    buffer: Buffer,
-    options: UploadApiOptions
-): Promise<UploadApiResponse> => {
-    return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
-            if (error) return reject(error);
-            if (!result) return reject(new Error("Cloudinary returned no result"));
-            resolve(result);
-        });
-        stream.end(buffer);
-    });
-};
-
 export const createMedia = async (input: {
     ownerId: string;
     title: string;
     tags?: string[];
     category: "image" | "document";
-    buffer: Buffer;
+    filePath: string;
     originalName: string;
     mimeType: string;
     size: number;
 }) => {
-    const resourceType = mimeToResourceType(input.mimeType);
-
-    const uploadResult = await uploadBufferToCloudinary(input.buffer, {
-        folder: CLOUDINARY_FOLDER,
-        resource_type: resourceType,
-    });
-
-    const createInput: Parameters<typeof createMediaRepository>[0] = {
-        ownerId: input.ownerId,
-        title: input.title,
-        category: input.category,
-        url: uploadResult.secure_url,
-        publicId: uploadResult.public_id,
-        originalName: input.originalName,
-        mimeType: input.mimeType,
-        size: input.size,
-    };
-    if (input.tags !== undefined) createInput.tags = input.tags;
-
-    const media = await createMediaRepository(createInput);
-
-    logger.info(
-        {
-            mediaId: media._id.toString(),
-            ownerId: input.ownerId,
-            publicId: media.publicId,
-            mimeType: input.mimeType,
-            size: input.size,
-        },
-        "file uploaded successfully"
-    );
+    const media = await createMediaRepository(input);
 
     return media;
 };
@@ -137,11 +88,12 @@ export const deleteMedia = async (ownerId: string, mediaId: string) => {
     if (media.ownerId.toString() !== ownerId) throw new AppError("Forbidden", 403);
 
     try {
-        await cloudinary.uploader.destroy(media.publicId, {
-            resource_type: mimeToResourceType(media.mimeType),
-        });
+        await unlink(media.filePath);
     } catch (err: unknown) {
-        logger.warn({ err, publicId: media.publicId }, "Failed to delete asset from Cloudinary");
+        const error = err as { code?: string };
+        if (error.code !== "ENOENT") {
+            logger.warn({ err }, "Failed to delete media file from disk");
+        }
     }
 
     await deleteMediaByIdRepository(mediaId);

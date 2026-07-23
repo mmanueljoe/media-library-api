@@ -1,14 +1,18 @@
 import multer from "multer";
-import type { Request, Response, NextFunction } from "express";
-import { env } from "../config/env.js";
-import { AppError } from "../utils/AppError.js";
 
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        cb(null, "uploads/");
+    },
+    filename: (_req, file, cb) => {
+        cb(null, Date.now() + "-" + file.originalname);
+    },
+});
 
-const allowedMimeTypes = new Set(["image/jpeg", "image/png", "application/pdf"]);
+const allowedMimeTypes = ["image/jpeg", "image/png", "application/pdf"];
 
 const fileFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
-    if (allowedMimeTypes.has(file.mimetype)) {
+    if (allowedMimeTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
         (cb as unknown as (error: Error | null, acceptFile: boolean) => void)(
@@ -19,23 +23,7 @@ const fileFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
 };
 
 const limits = {
-    fileSize: 1024 * 1024 * env.MAX_FILE_SIZE_MB,
+    fileSize: 1024 * 1024 * 5,
 };
 
 export const upload = multer({ storage, limits, fileFilter });
-
-/**
- * Wraps upload.single() so Multer's plain Error rejections (wrong MIME,
- * oversized file) become AppError(400) and reach the standard error envelope.
- */
-export const uploadSingle =
-    (field: string) =>
-    (req: Request, res: Response, next: NextFunction): void => {
-        upload.single(field)(req, res, (err: unknown) => {
-            if (err) {
-                const message = err instanceof Error ? err.message : "Upload failed";
-                return next(new AppError(message, 400));
-            }
-            next();
-        });
-    };
