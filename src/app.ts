@@ -1,4 +1,8 @@
 import express from "express";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { requestLogger } from "./middlewares/requestLogger.js";
 import { AppError } from "./utils/AppError.js";
@@ -8,6 +12,29 @@ import { healthRouter } from "./routes/health.routes.js";
 
 const app = express();
 app.disable("x-powered-by");
+
+app.use(helmet());
+app.use(cors());
+app.use(express.json({ limit: "100kb" }));
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { status: "error", message: "Too many requests, please try again later" },
+});
+app.use("/api/v1", limiter);
+
+app.get("/health", async (_req, res) => {
+    const dbState = mongoose.connection.readyState;
+    const dbOk = dbState === 1;
+    const status = dbOk ? 200 : 503;
+    res.status(status).json({
+        status: dbOk ? "ok" : "error",
+        db: dbOk ? "connected" : "disconnected",
+    });
+});
 
 app.use(express.json());
 app.use(requestLogger);
