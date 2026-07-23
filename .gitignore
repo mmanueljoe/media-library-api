@@ -1,5 +1,10 @@
 dist/
 node_modules/
 uploads/
+
+# Ignore every .env* file except the committed example.
 .env
+.env.*
+!.env.example
+
 *.log
