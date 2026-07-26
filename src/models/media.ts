@@ -21,11 +21,7 @@ const mediaSchema = new mongoose.Schema(
             required: true,
             enum: ["image", "document"],
         },
-        url: {
-            type: String,
-            required: true,
-        },
-        publicId: {
+        filePath: {
             type: String,
             required: true,
         },
@@ -41,6 +37,10 @@ const mediaSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
+        deletedAt: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: true,
@@ -48,6 +48,8 @@ const mediaSchema = new mongoose.Schema(
 );
 
 mediaSchema.index({ title: "text" });
+mediaSchema.index({ ownerId: 1, createdAt: -1 });
+mediaSchema.index({ ownerId: 1, deletedAt: 1 });
 
 export const Media = mongoose.model("Media", mediaSchema);
 

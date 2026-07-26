@@ -4,26 +4,12 @@ import { logger } from "../config/index.js";
 
 export const errorHandler = (
     err: unknown,
-    req: Request,
+    _req: Request,
     res: Response,
     _next: NextFunction
 ): void => {
     if (err instanceof AppError && err.isOperational) {
-        const context = {
-            err,
-            method: req.method,
-            path: req.originalUrl,
-            statusCode: err.statusCode,
-        };
-
-        if (err.statusCode === 404) {
-            logger.warn(context, "resource not found");
-        } else if (err.statusCode >= 400 && err.statusCode < 500) {
-            logger.warn(context, "validation or client error");
-        } else {
-            logger.error(context, "operational server error");
-        }
-
+        logger.warn({ err }, "Operational error");
         res.status(err.statusCode).json({
             status: "error",
             message: err.message,
@@ -31,8 +17,7 @@ export const errorHandler = (
         });
         return;
     }
-
-    logger.error({ err, method: req.method, path: req.originalUrl }, "unhandled error");
+    logger.error({ err }, "Unhandled error");
     res.status(500).json({
         status: "error",
         message: "Internal server error",

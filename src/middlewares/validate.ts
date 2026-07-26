@@ -49,14 +49,7 @@ export const validate =
 
             if (schemas.query) {
                 try {
-                    // Express 5's req.query is a getter that ignores Object.assign mutations.
-                    // Redefine the property so the parsed defaults actually stick.
-                    Object.defineProperty(req, "query", {
-                        value: schemas.query.parse(query),
-                        writable: true,
-                        configurable: true,
-                        enumerable: true,
-                    });
+                    Object.assign(req.query, schemas.query.parse(query));
                 } catch (err: unknown) {
                     if (err instanceof ZodError) {
                         return next(

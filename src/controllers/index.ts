@@ -4,5 +4,6 @@ export {
     getMyMedia,
     getMediaById,
     deleteMedia,
+    restoreMedia,
     updateMedia,
 } from "./mediaController.js";

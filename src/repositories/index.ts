@@ -3,6 +3,8 @@ export {
     createMedia,
     findMediaByOwner,
     findMediaById,
-    deleteMediaById,
+    softDeleteMediaById,
+    restoreMediaById,
     updateMediaById,
 } from "./mediaRepository.js";
+export { createAuditLog, findAuditLogsByUser } from "./auditLogRepository.js";

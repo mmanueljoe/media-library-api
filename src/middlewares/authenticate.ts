@@ -17,7 +17,7 @@ export const authenticate = async (
     try {
         decoded = jwt.verify(token, env.JWT_SECRET) as { userId: string };
     } catch {
-        return next(new AppError("Unauthorized", 401));
+        return next(new AppError("Invalid or expired token", 401));
     }
 
     if (!decoded.userId) return next(new AppError("Unauthorized", 401));

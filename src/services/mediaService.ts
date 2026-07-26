@@ -1,77 +1,73 @@
-import type { UploadApiOptions, UploadApiResponse } from "cloudinary";
-
-import { logger } from "../config/index.js";
 import { AppError } from "../utils/index.js";
-import { logger } from "../config/logger.js";
-import { cloudinary, mimeToResourceType } from "../config/cloudinary.js";
-import { AppError } from "../utils/AppError.js";
 import {
     createMedia as createMediaRepository,
-    deleteMediaById as deleteMediaByIdRepository,
+    softDeleteMediaById as softDeleteMediaByIdRepository,
+    restoreMediaById as restoreMediaByIdRepository,
     findMediaById as findMediaByIdRepository,
     findMediaByOwner as findMediaByOwnerRepository,
     updateMediaById as updateMediaByIdRepository,
 } from "../repositories/index.js";
-
-const CLOUDINARY_FOLDER = "media-library";
-
-const uploadBufferToCloudinary = (
-    buffer: Buffer,
-    options: UploadApiOptions
-): Promise<UploadApiResponse> => {
-    return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
-            if (error) return reject(error);
-            if (!result) return reject(new Error("Cloudinary returned no result"));
-            resolve(result);
-        });
-        stream.end(buffer);
-    });
-};
+import { createAuditLog } from "../repositories/index.js";
 
 export const createMedia = async (input: {
     ownerId: string;
     title: string;
     tags?: string[];
     category: "image" | "document";
-    buffer: Buffer;
+    filePath: string;
     originalName: string;
     mimeType: string;
     size: number;
 }) => {
-    const resourceType = mimeToResourceType(input.mimeType);
+    const media = await createMediaRepository(input);
 
-    const uploadResult = await uploadBufferToCloudinary(input.buffer, {
-        folder: CLOUDINARY_FOLDER,
-        resource_type: resourceType,
+    await createAuditLog({
+        userId: input.ownerId,
+        action: "create",
+        resourceType: "Media",
+        resourceId: media._id.toString(),
+        metadata: { title: input.title, originalName: input.originalName },
     });
 
-    const createInput: Parameters<typeof createMediaRepository>[0] = {
-        ownerId: input.ownerId,
-        title: input.title,
-        category: input.category,
-        url: uploadResult.secure_url,
-        publicId: uploadResult.public_id,
-        originalName: input.originalName,
-        mimeType: input.mimeType,
-        size: input.size,
-    };
-    if (input.tags !== undefined) createInput.tags = input.tags;
+    return media;
+};
 
-    const media = await createMediaRepository(createInput);
-
-    logger.info(
-        {
-            mediaId: media._id.toString(),
-            ownerId: input.ownerId,
-            publicId: media.publicId,
-            mimeType: input.mimeType,
-            size: input.size,
-        },
-        "file uploaded successfully"
+export const createMultipleMedia = async (
+    ownerId: string,
+    files: Express.Multer.File[],
+    meta: { title: string; tags?: string[]; category: "image" | "document" }
+) => {
+    const results = await Promise.all(
+        files.map((file) =>
+            createMediaRepository({
+                ownerId,
+                title: meta.title,
+                tags: meta.tags ?? [],
+                category: meta.category,
+                filePath: file.path,
+                originalName: file.originalname,
+                mimeType: file.mimetype,
+                size: file.size,
+            })
+        )
     );
 
-    return media;
+    const first = results[0];
+    if (first) {
+        await createAuditLog({
+            userId: ownerId,
+            action: "create",
+            resourceType: "Media",
+            resourceId: first._id.toString(),
+            metadata: {
+                title: meta.title,
+                count: files.length,
+                names: files.map((f) => f.originalname),
+            },
+        });
+    }
+
+    return results;
 };
 
 export const getMyMedia = async (
@@ -136,17 +132,43 @@ export const deleteMedia = async (ownerId: string, mediaId: string) => {
 
     if (media.ownerId.toString() !== ownerId) throw new AppError("Forbidden", 403);
 
-    try {
-        await cloudinary.uploader.destroy(media.publicId, {
-            resource_type: mimeToResourceType(media.mimeType),
-        });
-    } catch (err: unknown) {
-        logger.warn({ err, publicId: media.publicId }, "Failed to delete asset from Cloudinary");
-    }
+    const updated = await softDeleteMediaByIdRepository(mediaId);
 
-    await deleteMediaByIdRepository(mediaId);
+    if (!updated) throw new AppError("Media not found", 404);
 
-    return { id: media._id.toString() };
+    await createAuditLog({
+        userId: ownerId,
+        action: "delete",
+        resourceType: "Media",
+        resourceId: mediaId,
+        metadata: { title: media.title },
+    });
+
+    return { id: media._id.toString(), deletedAt: updated.deletedAt };
+};
+
+export const restoreMedia = async (ownerId: string, mediaId: string) => {
+    const media = await findMediaByIdRepository(mediaId, true);
+
+    if (!media) throw new AppError("Media not found", 404);
+
+    if (media.ownerId.toString() !== ownerId) throw new AppError("Forbidden", 403);
+
+    if (!media.deletedAt) throw new AppError("Media is not deleted", 400);
+
+    const updated = await restoreMediaByIdRepository(mediaId);
+
+    if (!updated) throw new AppError("Media not found", 404);
+
+    await createAuditLog({
+        userId: ownerId,
+        action: "restore",
+        resourceType: "Media",
+        resourceId: mediaId,
+        metadata: { title: media.title },
+    });
+
+    return updated;
 };
 
 export const updateMedia = async (
@@ -163,6 +185,14 @@ export const updateMedia = async (
     const updated = await updateMediaByIdRepository(mediaId, patch);
 
     if (!updated) throw new AppError("Media not found", 404);
+
+    await createAuditLog({
+        userId: ownerId,
+        action: "update",
+        resourceType: "Media",
+        resourceId: mediaId,
+        metadata: { changes: patch },
+    });
 
     return updated;
 };

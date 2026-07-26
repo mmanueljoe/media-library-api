@@ -15,11 +15,13 @@ export const findMediaByOwner = async (
         search?: string;
         sortBy?: "createdAt" | "title";
         order?: "asc" | "desc";
+        includeDeleted?: boolean;
     }
 ): Promise<{ total: number; results: MediaDoc[] }> => {
     const skip = (page - 1) * limit;
 
     const filter: Record<string, unknown> = { ownerId } as unknown as Record<string, unknown>;
+    if (!options?.includeDeleted) filter.deletedAt = null;
     if (options?.category) filter.category = options.category;
     if (options?.tags?.length) filter.tags = { $in: options.tags };
     if (options?.search) filter.$text = { $search: options.search };
@@ -39,12 +41,21 @@ export const findMediaByOwner = async (
     };
 };
 
-export const findMediaById = async (id: string): Promise<MediaDoc | null> => {
-    return await Media.findById(id);
+export const findMediaById = async (
+    id: string,
+    includeDeleted = false
+): Promise<MediaDoc | null> => {
+    const filter: Record<string, unknown> = { _id: id };
+    if (!includeDeleted) filter.deletedAt = null;
+    return await Media.findOne(filter);
 };
 
-export const deleteMediaById = async (id: string): Promise<MediaDoc | null> => {
-    return await Media.findByIdAndDelete(id);
+export const softDeleteMediaById = async (id: string): Promise<MediaDoc | null> => {
+    return await Media.findByIdAndUpdate(id, { deletedAt: new Date() }, { new: true });
+};
+
+export const restoreMediaById = async (id: string): Promise<MediaDoc | null> => {
+    return await Media.findByIdAndUpdate(id, { deletedAt: null }, { new: true });
 };
 
 export const updateMediaById = async (

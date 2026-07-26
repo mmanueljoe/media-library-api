@@ -2,7 +2,9 @@ import type { Request, Response } from "express";
 import { catchAsync, sendSuccess, AppError } from "../utils/index.js";
 import {
     createMedia,
+    createMultipleMedia,
     deleteMedia as deleteMediaService,
+    restoreMedia as restoreMediaService,
     getMediaById as getMediaByIdService,
     updateMedia as updateMediaService,
     getMyMedia as getMyMediaService,
@@ -11,25 +13,27 @@ import {
 export const uploadMedia = catchAsync(async (req: Request, res: Response) => {
     const ownerId = req.user!.id;
 
-    if (!req.file) throw new AppError("File is required", 400);
+    const files = req.files as Express.Multer.File[] | undefined;
+    if (!files?.length) throw new AppError("At least one file is required", 400);
 
     const { title, tags, category } = req.body;
-    const buffer = req.file!.buffer;
-    const originalName = req.file!.originalname;
-    const mimeType = req.file!.mimetype;
-    const size = req.file!.size;
 
-    const media = await createMedia({
-        ownerId,
-        title,
-        tags,
-        category,
-        buffer,
-        originalName,
-        mimeType,
-        size,
-    });
+    if (files.length === 1) {
+        const file = files[0]!;
+        const media = await createMedia({
+            ownerId,
+            title,
+            tags,
+            category,
+            filePath: file.path,
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            size: file.size,
+        });
+        return sendSuccess(res, media, 201);
+    }
 
+    const media = await createMultipleMedia(ownerId, files, { title, tags, category });
     sendSuccess(res, media, 201);
 });
 
@@ -87,6 +91,18 @@ export const deleteMedia = catchAsync(async (req: Request, res: Response) => {
     const result = await deleteMediaService(ownerId, id);
 
     sendSuccess(res, result, 200);
+});
+
+export const restoreMedia = catchAsync(async (req: Request, res: Response) => {
+    const ownerId = req.user!.id;
+    const rawId = req.params.id;
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
+
+    if (!id) throw new AppError("Validation error", 400);
+
+    const media = await restoreMediaService(ownerId, id);
+
+    sendSuccess(res, media, 200);
 });
 
 export const updateMedia = catchAsync(async (req: Request, res: Response) => {
