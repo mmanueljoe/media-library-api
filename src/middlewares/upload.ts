@@ -1,4 +1,5 @@
-import multer from "multer";
+import multer, { type FileFilterCallback } from "multer";
+import { type Request } from "express";
 
 const storage = multer.diskStorage({
     destination: (_req, _file, cb) => {
@@ -9,16 +10,17 @@ const storage = multer.diskStorage({
     },
 });
 
-const allowedMimeTypes = ["image/jpeg", "image/png", "application/pdf"];
+const allowedMimeTypes = new Set(["image/jpeg", "image/png", "application/pdf"]);
 
-const fileFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
-    if (allowedMimeTypes.includes(file.mimetype)) {
+const fileFilter: multer.Options["fileFilter"] = (
+    _req: Request,
+    file: Express.Multer.File,
+    cb: FileFilterCallback
+) => {
+    if (allowedMimeTypes.has(file.mimetype)) {
         cb(null, true);
     } else {
-        (cb as unknown as (error: Error | null, acceptFile: boolean) => void)(
-            new Error("Invalid file type"),
-            false
-        );
+        cb(new Error("Invalid file type"));
     }
 };
 

@@ -44,6 +44,7 @@ const mediaSchema = new mongoose.Schema(
 );
 
 mediaSchema.index({ title: "text" });
+mediaSchema.index({ ownerId: 1, createdAt: -1 });
 
 export const Media = mongoose.model("Media", mediaSchema);
 
