@@ -1,2 +1,10 @@
 export { register, login, getCurrentUser } from "./authService.js";
-export { createMedia, getMyMedia, getMediaById, deleteMedia, updateMedia } from "./mediaService.js";
+export {
+    createMedia,
+    createMultipleMedia,
+    getMyMedia,
+    getMediaById,
+    deleteMedia,
+    restoreMedia,
+    updateMedia,
+} from "./mediaService.js";

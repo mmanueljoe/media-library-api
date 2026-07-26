@@ -5,6 +5,7 @@ import {
     getMyMedia,
     getMediaById,
     deleteMedia,
+    restoreMedia,
     updateMedia,
 } from "../controllers/index.js";
 import {
@@ -19,7 +20,7 @@ const mediaRouter = Router();
 mediaRouter.post(
     "/",
     authenticate,
-    upload.single("file"),
+    upload.array("files", 10),
     validate(createMediaSchema),
     uploadMedia
 );
@@ -29,6 +30,8 @@ mediaRouter.get("/", authenticate, validate(listMediaSchema), getMyMedia);
 mediaRouter.get("/:id", authenticate, validate(getMediaByIdSchema), getMediaById);
 
 mediaRouter.delete("/:id", authenticate, validate(getMediaByIdSchema), deleteMedia);
+
+mediaRouter.post("/:id/restore", authenticate, validate(getMediaByIdSchema), restoreMedia);
 
 mediaRouter.patch("/:id", authenticate, validate(updateMediaSchema), updateMedia);
 
