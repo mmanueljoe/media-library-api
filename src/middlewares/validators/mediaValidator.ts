@@ -1,9 +1,21 @@
 import { z } from "zod";
 
+const tagsPreprocess = z.preprocess(
+    (val) => {
+        if (typeof val !== "string") return val;
+        const parts = val
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+        return parts.length ? parts : undefined;
+    },
+    z.array(z.string().min(1)).optional()
+);
+
 export const createMediaSchema = {
     body: z.object({
         title: z.string().trim().min(1).max(255),
-        tags: z.array(z.string().trim()).optional(),
+        tags: tagsPreprocess,
         category: z.enum(["image", "document"]),
     }),
 };
@@ -13,17 +25,7 @@ export const listMediaSchema = {
         page: z.coerce.number().int().min(1).default(1),
         limit: z.coerce.number().int().min(1).max(50).default(10),
         category: z.enum(["image", "document"]).optional(),
-        tags: z.preprocess(
-            (val) => {
-                if (typeof val !== "string") return val;
-                const parts = val
-                    .split(",")
-                    .map((t) => t.trim())
-                    .filter(Boolean);
-                return parts.length ? parts : undefined;
-            },
-            z.array(z.string().min(1)).optional()
-        ),
+        tags: tagsPreprocess,
         search: z.string().trim().min(1).optional(),
         sortBy: z.enum(["createdAt", "title"]).default("createdAt"),
         order: z.enum(["asc", "desc"]).default("desc"),
@@ -41,7 +43,7 @@ export const updateMediaSchema = {
     body: z
         .object({
             title: z.string().trim().min(1).max(255).optional(),
-            tags: z.array(z.string().trim()).optional(),
+            tags: tagsPreprocess,
             category: z.enum(["image", "document"]).optional(),
         })
         .refine((val) => Object.keys(val).length > 0, {
