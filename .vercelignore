@@ -1,0 +1,8 @@
+# Nothing here needs to reach the serverless bundle.
+tests/
+coverage/
+docs/
+postman/
+uploads/
+.github/
+.husky/

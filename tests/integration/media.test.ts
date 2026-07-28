@@ -105,9 +105,7 @@ describe("GET /api/v1/media", () => {
         await uploadOne(token, { category: "image" });
         await uploadOne(token, { category: "document", mime: "application/pdf" });
 
-        const res = await api()
-            .get("/api/v1/media?category=document")
-            .set(authHeader(token));
+        const res = await api().get("/api/v1/media?category=document").set(authHeader(token));
 
         expect(res.status).toBe(200);
         expect(res.body.data.results).toHaveLength(1);
@@ -119,9 +117,7 @@ describe("GET /api/v1/media", () => {
         await uploadOne(token, { title: "uniquephrase needle" });
         await uploadOne(token, { title: "other haystack" });
 
-        const res = await api()
-            .get("/api/v1/media?search=uniquephrase")
-            .set(authHeader(token));
+        const res = await api().get("/api/v1/media?search=uniquephrase").set(authHeader(token));
 
         expect(res.status).toBe(200);
         expect(res.body.data.results).toHaveLength(1);
@@ -200,10 +196,7 @@ describe("PATCH /api/v1/media/:id", () => {
         const upload = await uploadOne(token);
         const id = upload.body.data._id;
 
-        const res = await api()
-            .patch(`/api/v1/media/${id}`)
-            .set(authHeader(token))
-            .send({});
+        const res = await api().patch(`/api/v1/media/${id}`).set(authHeader(token)).send({});
 
         expect(res.status).toBe(400);
     });

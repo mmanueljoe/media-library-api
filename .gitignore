@@ -1,6 +1,8 @@
 dist/
+coverage/
 node_modules/
 uploads/
+.vercel/
 
 # Ignore every .env* file except the committed example.
 .env

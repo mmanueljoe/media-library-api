@@ -2,7 +2,7 @@
 
 This document is the single source of truth for taking the Media Library API from "works on my machine" to "live, tested, observable, and deployable." Every decision below has a short reason attached. If we change our minds later, we update this file first, then the code.
 
-It is the companion to [`ARCHITECTURE.md`](./ARCHITECTURE.md). That file describes *what we built*; this file describes *how we make it shippable*.
+It is the companion to [`ARCHITECTURE.md`](./ARCHITECTURE.md). That file describes _what we built_; this file describes _how we make it shippable_.
 
 ---
 
@@ -16,7 +16,7 @@ The API is built and runs locally. It has never been formally tested, it reads c
 - **A live deployment** at a public URL with health monitoring.
 - **Structured logging** so we can diagnose what's happening in production.
 
-Nothing in this phase changes the *contract* of the API — the five media endpoints, the auth endpoints, the response envelope — all stay identical. We change *how the project is configured, tested, observed, and shipped*, not what it does.
+Nothing in this phase changes the _contract_ of the API — the five media endpoints, the auth endpoints, the response envelope — all stay identical. We change _how the project is configured, tested, observed, and shipped_, not what it does.
 
 ---
 
@@ -24,20 +24,20 @@ Nothing in this phase changes the *contract* of the API — the five media endpo
 
 Each line is a deliberate choice with the alternative considered.
 
-| Area | Choice | Why this and not something else |
-| --- | --- | --- |
-| Test runner | **Vitest** | The project is TypeScript + ESM. Jest on TS+ESM needs `ts-jest`, an experimental-vm-modules flag, and config files. Vitest needs none of that and exposes the same `describe`/`it`/`expect` API. If a grader insists on Jest later, the test code barely changes — only the runner config. |
-| HTTP testing | **Supertest** | The lab specifies it. Industry default for Express integration tests. Wraps the Express app directly without binding a port — works perfectly in CI. |
-| Test database | **`mongodb-memory-server`** | Real `mongod` binary in RAM, fresh per run. Hermetic, fast, no secrets in CI, no Atlas rate-limit risk. Pointing tests at Atlas would require a separate cluster URI in GitHub Secrets and would burn the free-tier connection cap. |
-| File storage in prod | **Cloudinary** | Vercel's filesystem is ephemeral — Multer's disk storage breaks the moment the function cold-starts. Cloudinary's free tier (25 GB) supports both images and PDFs (PDFs as `resource_type: raw`), needs only an API key + secret in env vars, and is a one-call SDK. S3 is the industry standard for raw storage but adds AWS account setup, IAM, signed URLs, and region config — too much for this lab. Base64-in-Mongo is an anti-pattern. |
-| Multer storage mode | **`memoryStorage`** | Files no longer live on disk at all. The buffer is streamed straight to Cloudinary. No leftover temp files, no `unlink` calls, no `UPLOAD_DIR` dependency. |
-| Env loader | **`dotenv` + Zod, extended for multi-env** | `dotenv.config({ path: \`.env.\${NODE_ENV}\` })`, then the existing Zod schema. ~5 lines of new code. `dotenv-flow` would add a dependency for behavior we should understand. In real production, `.env.production` is never deployed — Vercel injects vars at runtime — so the file is a learning fiction; `.gitignore` enforces this. |
-| Logger | **Pino** (already in place) | Fast, JSON by default, `pino-pretty` for dev. We extend it with a request-logging middleware and add explicit log calls at the events the lab requires. We do **not** switch to Winston — Pino is already wired and is faster. |
-| Package manager | **Yarn** (the repo has `yarn.lock`) | CI uses `yarn install --frozen-lockfile`. Switching to npm now would mean deleting `yarn.lock` and producing a new `package-lock.json` — a churn commit with no payoff. Mixing both is the real anti-pattern. The lab's `npm ci` example is illustrative, not prescriptive. |
-| Node version | **20 LTS**, pinned via `.nvmrc` and `engines` | Same version used in dev, CI, and Vercel. `.nvmrc` lets `nvm use` pick the right version locally; the GitHub Actions workflow reads it; Vercel respects `engines.node`. |
-| Deployment | **Vercel** | The lab specifies it. Free hobby tier, GitHub-integrated, automatic preview deploys per PR. The serverless model forces us to confront ephemeral storage (resolved via Cloudinary) and stateless design — both good lessons. |
-| Branch model | **Git Flow (`main` + `develop` + feature branches)** | `main` holds the stable, submitted state. `develop` is the integration branch for the production-readiness work. Feature branches (`feat/*`, `chore/*`, etc.) PR into `develop`. When ready, `develop` PRs into `main`. Matches what the lab asks for and mirrors real-team release flow. |
-| CI provider | **GitHub Actions** | The lab specifies it. Free for public repos and generous for private. Native to where the code lives. |
+| Area                 | Choice                                               | Why this and not something else                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test runner          | **Vitest**                                           | The project is TypeScript + ESM. Jest on TS+ESM needs `ts-jest`, an experimental-vm-modules flag, and config files. Vitest needs none of that and exposes the same `describe`/`it`/`expect` API. If a grader insists on Jest later, the test code barely changes — only the runner config.                                                                                                                                                    |
+| HTTP testing         | **Supertest**                                        | The lab specifies it. Industry default for Express integration tests. Wraps the Express app directly without binding a port — works perfectly in CI.                                                                                                                                                                                                                                                                                          |
+| Test database        | **`mongodb-memory-server`**                          | Real `mongod` binary in RAM, fresh per run. Hermetic, fast, no secrets in CI, no Atlas rate-limit risk. Pointing tests at Atlas would require a separate cluster URI in GitHub Secrets and would burn the free-tier connection cap.                                                                                                                                                                                                           |
+| File storage in prod | **Cloudinary**                                       | Vercel's filesystem is ephemeral — Multer's disk storage breaks the moment the function cold-starts. Cloudinary's free tier (25 GB) supports both images and PDFs (PDFs as `resource_type: raw`), needs only an API key + secret in env vars, and is a one-call SDK. S3 is the industry standard for raw storage but adds AWS account setup, IAM, signed URLs, and region config — too much for this lab. Base64-in-Mongo is an anti-pattern. |
+| Multer storage mode  | **`memoryStorage`**                                  | Files no longer live on disk at all. The buffer is streamed straight to Cloudinary. No leftover temp files, no `unlink` calls, no `UPLOAD_DIR` dependency.                                                                                                                                                                                                                                                                                    |
+| Env loader           | **`dotenv` + Zod, extended for multi-env**           | `dotenv.config({ path: \`.env.\${NODE_ENV}\` })`, then the existing Zod schema. ~5 lines of new code. `dotenv-flow`would add a dependency for behavior we should understand. In real production,`.env.production`is never deployed — Vercel injects vars at runtime — so the file is a learning fiction;`.gitignore` enforces this.                                                                                                           |
+| Logger               | **Pino** (already in place)                          | Fast, JSON by default, `pino-pretty` for dev. We extend it with a request-logging middleware and add explicit log calls at the events the lab requires. We do **not** switch to Winston — Pino is already wired and is faster.                                                                                                                                                                                                                |
+| Package manager      | **Yarn** (the repo has `yarn.lock`)                  | CI uses `yarn install --frozen-lockfile`. Switching to npm now would mean deleting `yarn.lock` and producing a new `package-lock.json` — a churn commit with no payoff. Mixing both is the real anti-pattern. The lab's `npm ci` example is illustrative, not prescriptive.                                                                                                                                                                   |
+| Node version         | **20 LTS**, pinned via `.nvmrc` and `engines`        | Same version used in dev, CI, and Vercel. `.nvmrc` lets `nvm use` pick the right version locally; the GitHub Actions workflow reads it; Vercel respects `engines.node`.                                                                                                                                                                                                                                                                       |
+| Deployment           | **Vercel**                                           | The lab specifies it. Free hobby tier, GitHub-integrated, automatic preview deploys per PR. The serverless model forces us to confront ephemeral storage (resolved via Cloudinary) and stateless design — both good lessons.                                                                                                                                                                                                                  |
+| Branch model         | **Git Flow (`main` + `develop` + feature branches)** | `main` holds the stable, submitted state. `develop` is the integration branch for the production-readiness work. Feature branches (`feat/*`, `chore/*`, etc.) PR into `develop`. When ready, `develop` PRs into `main`. Matches what the lab asks for and mirrors real-team release flow.                                                                                                                                                     |
+| CI provider          | **GitHub Actions**                                   | The lab specifies it. Free for public repos and generous for private. Native to where the code lives.                                                                                                                                                                                                                                                                                                                                         |
 
 ---
 
@@ -101,12 +101,12 @@ media-library-api/
 
 ### The three environments
 
-| File | Loaded when | Committed? | Purpose |
-| --- | --- | --- | --- |
-| `.env.example` | never | **yes** | Lists every variable with no values. Documentation. |
-| `.env.development` | `NODE_ENV=development` | no | Local dev values (Atlas dev URI, dev JWT secret, etc.). |
-| `.env.test` | `NODE_ENV=test` | no | In-memory Mongo URI gets injected by the test setup, so `DATABASE_URL` here is mostly a placeholder. `LOG_LEVEL=error`. |
-| `.env.production` | `NODE_ENV=production` | **no — never** | Does not exist as a file. Vercel injects production vars at runtime from its dashboard. |
+| File               | Loaded when            | Committed?     | Purpose                                                                                                                 |
+| ------------------ | ---------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `.env.example`     | never                  | **yes**        | Lists every variable with no values. Documentation.                                                                     |
+| `.env.development` | `NODE_ENV=development` | no             | Local dev values (Atlas dev URI, dev JWT secret, etc.).                                                                 |
+| `.env.test`        | `NODE_ENV=test`        | no             | In-memory Mongo URI gets injected by the test setup, so `DATABASE_URL` here is mostly a placeholder. `LOG_LEVEL=error`. |
+| `.env.production`  | `NODE_ENV=production`  | **no — never** | Does not exist as a file. Vercel injects production vars at runtime from its dashboard.                                 |
 
 ### Required keys (in `.env.example`)
 
@@ -117,8 +117,11 @@ DATABASE_URL=
 JWT_SECRET=
 JWT_EXPIRES_IN=
 MAX_FILE_SIZE_MB=
-UPLOAD_DIR=
 LOG_LEVEL=
+CORS_ORIGINS=
+RATE_LIMIT_WINDOW_MINUTES=
+RATE_LIMIT_MAX_REQUESTS=
+AUTH_RATE_LIMIT_MAX_REQUESTS=
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
@@ -127,7 +130,7 @@ CLOUDINARY_API_SECRET=
 Notes:
 
 - `DATABASE_URL` replaces the previous `MONGO_URI` naming, to match the lab spec. We rename consistently across env, config, and any docs.
-- `UPLOAD_DIR` is kept because the lab requires it, but the production code path (memory storage → Cloudinary) does not read it. We document it as "reserved for local-disk fallback." No mystery.
+- `UPLOAD_DIR` was dropped entirely. A var no code reads is a var that misleads whoever reads it next.
 - `MAX_FILE_SIZE_MB` becomes the source of truth for Multer's size limit (previously hardcoded to 5 MB in [upload.ts:26](src/middlewares/upload.ts:26)).
 
 ### Loading and validation
@@ -135,7 +138,7 @@ Notes:
 In `src/config/env.ts`:
 
 1. Read `process.env.NODE_ENV` (default `development`).
-2. Call `dotenv.config({ path: \`.env.\${NODE_ENV}\` })` — populates `process.env` from the matching file. In production on Vercel, this no-ops because the file doesn't exist; Vercel already injected the vars. Either way the next step runs.
+2. Call `dotenv.config({ path: \`.env.\${NODE_ENV}\` })`— populates`process.env` from the matching file. In production on Vercel, this no-ops because the file doesn't exist; Vercel already injected the vars. Either way the next step runs.
 3. Pass `process.env` through the Zod schema. Missing or malformed → process crashes with a clear message at boot.
 4. Export a typed `env` object. Every other module reads config from here, never from `process.env` directly.
 
@@ -201,15 +204,15 @@ Pino is already wired. We extend it with:
 
 Per the lab's event/level table:
 
-| Event | Level | Where the call lives |
-| --- | --- | --- |
-| Server started on port X | `info` | [server.ts](src/server.ts) — replaces the leftover `console.log` |
-| Incoming request | `info` | new request-logger middleware |
-| File uploaded successfully | `info` | `mediaService.createMedia` after Cloudinary returns |
-| Validation error | `warn` | `errorHandler` when `err.statusCode === 400` |
-| Resource not found | `warn` | `errorHandler` when `err.statusCode === 404` |
-| Unhandled error caught by global handler | `error` | `errorHandler` for any non-`AppError` |
-| Unhandled rejection / uncaught exception | `error` | `server.ts` process handlers (already in place — verify level) |
+| Event                                    | Level   | Where the call lives                                             |
+| ---------------------------------------- | ------- | ---------------------------------------------------------------- |
+| Server started on port X                 | `info`  | [server.ts](src/server.ts) — replaces the leftover `console.log` |
+| Incoming request                         | `info`  | new request-logger middleware                                    |
+| File uploaded successfully               | `info`  | `mediaService.createMedia` after Cloudinary returns              |
+| Validation error                         | `warn`  | `errorHandler` when `err.statusCode === 400`                     |
+| Resource not found                       | `warn`  | `errorHandler` when `err.statusCode === 404`                     |
+| Unhandled error caught by global handler | `error` | `errorHandler` for any non-`AppError`                            |
+| Unhandled rejection / uncaught exception | `error` | `server.ts` process handlers (already in place — verify level)   |
 
 ### Per-environment behavior
 
@@ -237,7 +240,7 @@ There is one leftover in [server.ts:11](src/server.ts:11). It goes. After this l
 - `timestamp` — `new Date().toISOString()`.
 - No auth. No DB call. Cheap and synchronous. The whole point is "is the process alive."
 
-A **deeper** `/health/ready` check (verifies Mongo connectivity, Cloudinary reachability) is *not* in scope for this lab but would be the natural next step in a real production app. We note it for the roadmap.
+A **deeper** `/health/ready` check (verifies Mongo connectivity, Cloudinary reachability) is _not_ in scope for this lab but would be the natural next step in a real production app. We note it for the roadmap.
 
 The endpoint moves out of `app.ts` into `src/routes/health.routes.ts` for consistency with the rest of the codebase (everything else has its own route file).
 
@@ -256,9 +259,9 @@ We use Option A:
 
 ```json
 {
-  "version": 2,
-  "builds": [{ "src": "src/app.ts", "use": "@vercel/node" }],
-  "routes": [{ "src": "/(.*)", "dest": "src/app.ts" }]
+    "version": 2,
+    "builds": [{ "src": "src/app.ts", "use": "@vercel/node" }],
+    "routes": [{ "src": "/(.*)", "dest": "src/app.ts" }]
 }
 ```
 
@@ -270,20 +273,20 @@ Vercel's `@vercel/node` expects the entry file to export an Express app or a han
 
 Set via the Vercel **dashboard**, not the CLI. The lab is explicit about this — the CLI variant (`vercel env add`) is fine for non-secrets but the dashboard provides better audit and reduces shell-history exposure. Required:
 
-`NODE_ENV=production`, `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `MAX_FILE_SIZE_MB`, `LOG_LEVEL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
+`NODE_ENV=production`, `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `MAX_FILE_SIZE_MB`, `LOG_LEVEL`, `CORS_ORIGINS`, `RATE_LIMIT_WINDOW_MINUTES`, `RATE_LIMIT_MAX_REQUESTS`, `AUTH_RATE_LIMIT_MAX_REQUESTS`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
 
 `PORT` is **not** set — Vercel chooses it. Our `server.ts` reads `env.PORT`, but `server.ts` doesn't run on Vercel, so it doesn't matter.
 
-`UPLOAD_DIR` is unused in production but set to `/tmp/uploads` for completeness in case any code path is added later. Vercel's `/tmp` is the only writable directory.
+`UPLOAD_DIR` no longer exists — see above. Nothing writes to disk, so Vercel's read-only filesystem is a non-issue rather than something to work around.
 
 ### Known Vercel limitations (documented for the lab)
 
-| Limitation | Our response |
-| --- | --- |
-| Ephemeral filesystem | All uploads go through Cloudinary. No `fs.writeFile` in any request handler. |
-| Cold starts | Mongo connection is created lazily and cached across invocations in the same warm container. |
+| Limitation                              | Our response                                                                                    |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Ephemeral filesystem                    | All uploads go through Cloudinary. No `fs.writeFile` in any request handler.                    |
+| Cold starts                             | Mongo connection is created lazily and cached across invocations in the same warm container.    |
 | 10-second function timeout (hobby tier) | Acceptable for this API. Larger Cloudinary uploads could hit it; we set Multer's limit to 5 MB. |
-| No persistent in-memory state | We do not use in-memory caches. JWT verification is stateless. |
+| No persistent in-memory state           | We do not use in-memory caches. JWT verification is stateless.                                  |
 
 ---
 

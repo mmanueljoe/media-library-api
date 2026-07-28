@@ -1,0 +1,10 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "buildCommand": "yarn build",
+    "build": {
+        "env": {
+            "MONGOMS_DISABLE_POSTINSTALL": "1"
+        }
+    },
+    "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+}
