@@ -67,7 +67,7 @@ export const softDeleteMediaById = async (id: string): Promise<MediaDoc | null> 
 
 export const updateMediaById = async (
     id: string,
-    patch: Partial<Pick<CreateMediaInput, "title" | "tags" | "category">>
+    patch: Partial<Pick<CreateMediaInput, "title" | "tags">>
 ): Promise<MediaDoc | null> => {
     return await Media.findOneAndUpdate({ _id: id, deletedAt: null }, patch, {
         returnDocument: "after",

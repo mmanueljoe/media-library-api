@@ -2,6 +2,7 @@ import type { UploadApiOptions, UploadApiResponse } from "cloudinary";
 
 import { logger } from "@/config/logger.js";
 import { cloudinary, mimeToResourceType } from "@/config/cloudinary.js";
+import { deriveCategory, type MediaCategory } from "@/config/mediaTypes.js";
 import { AppError } from "@/utils/AppError.js";
 import {
     createMedia as createMediaRepository,
@@ -35,12 +36,28 @@ export const createMedia = async (input: {
     ownerId: string;
     title: string;
     tags?: string[];
-    category: "image" | "document";
+    /** What the client claimed, if anything. The file decides. */
+    declaredCategory?: MediaCategory;
     buffer: Buffer;
     originalName: string;
     mimeType: string;
     size: number;
 }) => {
+    const category = deriveCategory(input.mimeType);
+
+    // Multer's fileFilter rejects unsupported types before we get here, so this
+    // is a guard against the two lists drifting apart, not an expected path.
+    if (!category) throw new AppError("Unsupported file type", 400);
+
+    // Rejecting rather than quietly overriding: a client sending the wrong
+    // category has a bug, and silently fixing it means they never find out.
+    if (input.declaredCategory && input.declaredCategory !== category) {
+        throw new AppError(
+            `Category "${input.declaredCategory}" does not match the uploaded file, which is a "${category}"`,
+            400
+        );
+    }
+
     const resourceType = mimeToResourceType(input.mimeType);
 
     const uploadResult = await uploadBufferToCloudinary(input.buffer, {
@@ -51,7 +68,7 @@ export const createMedia = async (input: {
     const createInput: Parameters<typeof createMediaRepository>[0] = {
         ownerId: input.ownerId,
         title: input.title,
-        category: input.category,
+        category,
         url: uploadResult.secure_url,
         publicId: uploadResult.public_id,
         originalName: input.originalName,
@@ -220,7 +237,7 @@ export const purgeDeletedMedia = async (input: {
 export const updateMedia = async (
     ownerId: string,
     mediaId: string,
-    patch: { title?: string; tags?: string[]; category?: "image" | "document" }
+    patch: { title?: string; tags?: string[] }
 ) => {
     const media = await findMediaByIdRepository(mediaId);
 
