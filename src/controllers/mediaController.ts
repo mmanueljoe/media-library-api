@@ -28,7 +28,9 @@ export const uploadMedia = catchAsync(async (req: Request, res: Response) => {
         ownerId,
         title,
         tags,
-        category,
+        // Passed through as a claim to be checked, not as the value to store —
+        // the service derives the real category from mimeType.
+        declaredCategory: category,
         buffer,
         originalName,
         mimeType,
@@ -101,16 +103,15 @@ export const updateMedia = catchAsync(async (req: Request, res: Response) => {
 
     if (!id) throw new AppError("Validation error", 400);
 
-    const { title, tags, category } = req.body as {
+    // No category: it's derived from the file at upload and the file never changes.
+    const { title, tags } = req.body as {
         title?: string;
         tags?: string[];
-        category?: "image" | "document";
     };
 
-    const patch: { title?: string; tags?: string[]; category?: "image" | "document" } = {};
+    const patch: { title?: string; tags?: string[] } = {};
     if (title !== undefined) patch.title = title;
     if (tags !== undefined) patch.tags = tags;
-    if (category !== undefined) patch.category = category;
 
     const updated = await updateMediaService(ownerId, id, patch);
 

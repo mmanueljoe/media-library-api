@@ -1,18 +1,19 @@
 import multer from "multer";
 import type { Request, Response, NextFunction } from "express";
 import { env } from "@/config/env.js";
+import { allowedMimeTypes, deriveCategory } from "@/config/mediaTypes.js";
 import { AppError } from "@/utils/AppError.js";
 
 const storage = multer.memoryStorage();
 
-const allowedMimeTypes = new Set(["image/jpeg", "image/png", "application/pdf"]);
-
 const fileFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
-    if (allowedMimeTypes.has(file.mimetype)) {
+    // deriveCategory returning a value is the same question as "is this type
+    // allowed", so the accepted list has one definition in mediaTypes.ts.
+    if (deriveCategory(file.mimetype)) {
         cb(null, true);
     } else {
         (cb as unknown as (error: Error | null, acceptFile: boolean) => void)(
-            new Error(`Invalid file type. Allowed: ${[...allowedMimeTypes].join(", ")}`),
+            new Error(`Invalid file type. Allowed: ${allowedMimeTypes.join(", ")}`),
             false
         );
     }
