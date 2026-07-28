@@ -204,15 +204,15 @@ Pino is already wired. We extend it with:
 
 Per the lab's event/level table:
 
-| Event                                    | Level   | Where the call lives                                             |
-| ---------------------------------------- | ------- | ---------------------------------------------------------------- |
-| Server started on port X                 | `info`  | [server.ts](src/server.ts) — replaces the leftover `console.log` |
-| Incoming request                         | `info`  | new request-logger middleware                                    |
-| File uploaded successfully               | `info`  | `mediaService.createMedia` after Cloudinary returns              |
-| Validation error                         | `warn`  | `errorHandler` when `err.statusCode === 400`                     |
-| Resource not found                       | `warn`  | `errorHandler` when `err.statusCode === 404`                     |
-| Unhandled error caught by global handler | `error` | `errorHandler` for any non-`AppError`                            |
-| Unhandled rejection / uncaught exception | `error` | `server.ts` process handlers (already in place — verify level)   |
+| Event                                    | Level   | Where the call lives                                                   |
+| ---------------------------------------- | ------- | ---------------------------------------------------------------------- |
+| Server started on port X                 | `info`  | [bootstrap.ts](src/bootstrap.ts) — replaces the leftover `console.log` |
+| Incoming request                         | `info`  | new request-logger middleware                                          |
+| File uploaded successfully               | `info`  | `mediaService.createMedia` after Cloudinary returns                    |
+| Validation error                         | `warn`  | `errorHandler` when `err.statusCode === 400`                           |
+| Resource not found                       | `warn`  | `errorHandler` when `err.statusCode === 404`                           |
+| Unhandled error caught by global handler | `error` | `errorHandler` for any non-`AppError`                                  |
+| Unhandled rejection / uncaught exception | `error` | `server.ts` process handlers (already in place — verify level)         |
 
 ### Per-environment behavior
 
@@ -224,7 +224,7 @@ The transport is selected once in `src/config/logger.ts` based on `env.NODE_ENV`
 
 ### The `console.log` audit
 
-There is one leftover in [server.ts:11](src/server.ts:11). It goes. After this lab, the only `console.*` allowed in committed code is in test files when explicitly silencing output is needed.
+There is one leftover in [bootstrap.ts:11](src/bootstrap.ts:11). It goes. After this lab, the only `console.*` allowed in committed code is in test files when explicitly silencing output is needed.
 
 ---
 
@@ -267,7 +267,7 @@ We use Option A:
 
 ### What gets exported
 
-Vercel's `@vercel/node` expects the entry file to export an Express app or a handler. Our [`app.ts`](src/app.ts) already does `export default app`, which is correct. `server.ts` is **not** used on Vercel — Vercel does its own listening. `server.ts` stays the local entrypoint.
+**Superseded by what actually shipped.** We use a dedicated `api/index.js` that re-exports the compiled app from `dist/`, with `yarn build` as the build command — Option B below, not Option A. The source files are also named [`createApp.ts`](src/createApp.ts) and [`bootstrap.ts`](src/bootstrap.ts): Vercel auto-detects a default-exporting `app`/`index`/`server` file in `src/` and compiles it with its own TypeScript settings, which broke the build. `bootstrap.ts` is **not** used on Vercel — Vercel does its own listening. It stays the local entrypoint. See the README's Deployment section.
 
 ### Production env vars
 

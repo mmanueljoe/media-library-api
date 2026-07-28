@@ -1,4 +1,4 @@
-import app from "./app.js";
+import app from "./createApp.js";
 import { env, logger, connectDB } from "@/config/index.js";
 import mongoose from "mongoose";
 

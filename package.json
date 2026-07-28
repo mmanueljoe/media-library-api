@@ -1,7 +1,7 @@
 {
     "name": "media-library-api",
     "version": "1.0.0",
-    "main": "dist/server.js",
+    "main": "dist/bootstrap.js",
     "type": "module",
     "license": "MIT",
     "engines": {
@@ -56,9 +56,10 @@
     },
     "scripts": {
         "prepare": "husky install",
-        "dev": "tsx watch src/server.ts",
-        "start": "node dist/server.js",
-        "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+        "dev": "tsx watch src/bootstrap.ts",
+        "start": "node dist/bootstrap.js",
+        "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+        "build": "yarn clean && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
         "lint": "eslint .",
         "format:check": "prettier --check .",
         "format": "prettier --write .",

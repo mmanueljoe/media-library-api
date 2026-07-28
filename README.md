@@ -50,7 +50,7 @@ Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer + Clo
 
 ## Requirements
 
-- Node.js **22.22.1** or newer (see `.nvmrc`)
+- Node.js **22.x** — pinned to the major in `engines` and `.nvmrc`, so Vercel cannot silently move you onto a new Node major
 - **Yarn** (the project uses `yarn.lock`)
 - A MongoDB instance — local install **or** MongoDB Atlas connection string
 
@@ -81,8 +81,9 @@ The server starts on `http://localhost:3000` (or whatever `PORT` you set).
 | Command             | What it does                                       |
 | ------------------- | -------------------------------------------------- |
 | `yarn dev`          | Start the dev server with auto-reload (tsx watch). |
-| `yarn build`        | Compile TypeScript to `dist/`.                     |
-| `yarn start`        | Run the compiled app from `dist/server.js`.        |
+| `yarn build`        | Clean `dist/`, then compile TypeScript into it.    |
+| `yarn clean`        | Remove `dist/`.                                    |
+| `yarn start`        | Run the compiled app from `dist/bootstrap.js`.     |
 | `yarn lint`         | Check code for lint errors.                        |
 | `yarn format`       | Auto-format all files with Prettier.               |
 | `yarn format:check` | Check formatting without changing files.           |
@@ -134,8 +135,8 @@ media-library-api/
 │   ├── models/                 Mongoose schemas and TypeScript types
 │   ├── middlewares/            validate, authenticate, authenticateCron, upload, rateLimit, errorHandler
 │   ├── utils/                  AppError, catchAsync, sendSuccess, mongoErrors
-│   ├── app.ts                  Express app construction (no listening)
-│   └── server.ts               Local entrypoint: connect DB, listen, process handlers
+│   ├── createApp.ts            Express app construction (no listening)
+│   └── bootstrap.ts            Local entrypoint: connect DB, listen, process handlers
 ├── tests/
 │   ├── integration/            Route-level tests against an in-memory MongoDB
 │   ├── unit/                   Middleware, service, and utility tests
@@ -146,6 +147,7 @@ media-library-api/
 ├── .gitignore
 ├── .prettierrc
 ├── .prettierignore
+├── public/                     Stub static output — see Deployment for why it exists
 ├── .vercelignore
 ├── eslint.config.js
 ├── package.json
@@ -342,16 +344,24 @@ every request, which isn't worth it until there's real traffic.
 
 ## Deployment (Vercel)
 
-The app runs two ways off the same Express instance in `src/app.ts`:
+The app runs two ways off the same Express instance in `src/createApp.ts`:
 
-| Environment | Entry point     | How it starts                                              |
-| ----------- | --------------- | ---------------------------------------------------------- |
-| Local       | `src/server.ts` | `app.listen()` — a long-lived process you own              |
-| Vercel      | `api/index.js`  | Vercel imports the app and passes it one request at a time |
+| Environment | Entry point        | How it starts                                              |
+| ----------- | ------------------ | ---------------------------------------------------------- |
+| Local       | `src/bootstrap.ts` | `app.listen()` — a long-lived process you own              |
+| Vercel      | `api/index.js`     | Vercel imports the app and passes it one request at a time |
 
 `vercel.json` sets the build to `yarn build` and rewrites every path to `/api`, so
 Express keeps doing its own routing instead of Vercel splitting routes into
 separate functions.
+
+**Why the files are named `createApp.ts` and `bootstrap.ts`** rather than the more
+obvious `app.ts` and `server.ts`: Vercel treats a default-exporting `app`,
+`index`, or `server` file in `src/` as an Express entrypoint and compiles it with
+its own TypeScript settings, which do not match `tsconfig.build.json`. That
+produced a build error on a default import that compiles fine locally. These names
+match nothing it looks for, so `api/index.js` is the only entrypoint it finds.
+`framework: null` in `vercel.json` disables the detection as well — belt and braces.
 
 **Environment variables** are set in the Vercel dashboard, not in a file — there
 is no `.env.production`. Every variable in [`.env.example`](.env.example) must be
