@@ -94,22 +94,25 @@ The server starts on `http://localhost:3000` (or whatever `PORT` you set).
 
 All vars are loaded from `.env.<NODE_ENV>` at boot (so `.env.development`, `.env.test`, etc.) and validated by Zod. The app refuses to start if any required var is missing or malformed. In production on Vercel, vars are injected by the platform — no file is read.
 
-| Variable                       | Required | Default       | Description                                                                             |
-| ------------------------------ | -------- | ------------- | --------------------------------------------------------------------------------------- |
-| `NODE_ENV`                     | no       | `development` | One of `development` \| `production` \| `test`. Also picks which `.env.*` file loads.   |
-| `PORT`                         | no       | `3000`        | Port the HTTP server listens on.                                                        |
-| `DATABASE_URL`                 | **yes**  | —             | MongoDB connection string (local or Atlas).                                             |
-| `JWT_SECRET`                   | **yes**  | —             | Secret for signing JWTs. Minimum 16 characters. Use a long random string in production. |
-| `JWT_EXPIRES_IN`               | no       | `7d`          | Token lifetime (e.g. `1h`, `7d`, `30d`).                                                |
-| `MAX_FILE_SIZE_MB`             | no       | `5`           | Max upload size in megabytes (enforced by Multer). See the Vercel body limit below.     |
-| `LOG_LEVEL`                    | no       | `info`        | Pino log level: `debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`.          |
-| `CORS_ORIGINS`                 | no       | _(empty)_     | Comma-separated browser origins allowed to call the API. Empty allows none.             |
-| `RATE_LIMIT_WINDOW_MINUTES`    | no       | `15`          | Length of the rate-limit window.                                                        |
-| `RATE_LIMIT_MAX_REQUESTS`      | no       | `100`         | Requests per IP per window across `/api/v1`.                                            |
-| `AUTH_RATE_LIMIT_MAX_REQUESTS` | no       | `10`          | Failed login/register attempts per IP per window.                                       |
-| `CLOUDINARY_CLOUD_NAME`        | no\*     | —             | Cloudinary cloud name. Required from step 4 (Cloudinary migration) onward.              |
-| `CLOUDINARY_API_KEY`           | no\*     | —             | Cloudinary API key. Required from step 4 onward.                                        |
-| `CLOUDINARY_API_SECRET`        | no\*     | —             | Cloudinary API secret. Required from step 4 onward.                                     |
+| Variable                       | Required | Default       | Description                                                                                           |
+| ------------------------------ | -------- | ------------- | ----------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                     | no       | `development` | One of `development` \| `production` \| `test`. Also picks which `.env.*` file loads.                 |
+| `PORT`                         | no       | `3000`        | Port the HTTP server listens on.                                                                      |
+| `DATABASE_URL`                 | **yes**  | —             | MongoDB connection string (local or Atlas).                                                           |
+| `JWT_SECRET`                   | **yes**  | —             | Secret for signing JWTs. Minimum 16 characters. Use a long random string in production.               |
+| `JWT_EXPIRES_IN`               | no       | `7d`          | Token lifetime (e.g. `1h`, `7d`, `30d`).                                                              |
+| `MAX_FILE_SIZE_MB`             | no       | `5`           | Max upload size in megabytes (enforced by Multer). See the Vercel body limit below.                   |
+| `LOG_LEVEL`                    | no       | `info`        | Pino log level: `debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`.                        |
+| `CORS_ORIGINS`                 | no       | _(empty)_     | Comma-separated browser origins allowed to call the API. Empty allows none.                           |
+| `RATE_LIMIT_WINDOW_MINUTES`    | no       | `15`          | Length of the rate-limit window.                                                                      |
+| `RATE_LIMIT_MAX_REQUESTS`      | no       | `100`         | Requests per IP per window across `/api/v1`.                                                          |
+| `AUTH_RATE_LIMIT_MAX_REQUESTS` | no       | `10`          | Failed login/register attempts per IP per window.                                                     |
+| `MEDIA_RETENTION_DAYS`         | no       | `30`          | How long a soft-deleted item stays restorable before the purge job removes it.                        |
+| `MEDIA_PURGE_BATCH_LIMIT`      | no       | `100`         | Max items one purge run will process.                                                                 |
+| `CRON_SECRET`                  | no\*     | —             | Bearer token Vercel sends when triggering the cron. Without it the purge endpoint rejects everything. |
+| `CLOUDINARY_CLOUD_NAME`        | no\*     | —             | Cloudinary cloud name. Required from step 4 (Cloudinary migration) onward.                            |
+| `CLOUDINARY_API_KEY`           | no\*     | —             | Cloudinary API key. Required from step 4 onward.                                                      |
+| `CLOUDINARY_API_SECRET`        | no\*     | —             | Cloudinary API secret. Required from step 4 onward.                                                   |
 
 See [`.env.example`](.env.example) for a copy-paste template.
 
@@ -124,12 +127,12 @@ media-library-api/
 ├── docs/                       Architectural and setup documentation
 ├── src/
 │   ├── config/                 env loading, logger, db, cloudinary, cors, requestContext
-│   ├── routes/                 URL → controller wiring (no logic)
+│   ├── routes/                 URL → controller wiring (no logic), incl. cron.routes.ts
 │   ├── controllers/            Request/response handling (delegates to services)
 │   ├── services/               Business rules and orchestration
 │   ├── repositories/           Database queries
 │   ├── models/                 Mongoose schemas and TypeScript types
-│   ├── middlewares/            validate, authenticate, upload, rateLimit, errorHandler
+│   ├── middlewares/            validate, authenticate, authenticateCron, upload, rateLimit, errorHandler
 │   ├── utils/                  AppError, catchAsync, sendSuccess, mongoErrors
 │   ├── app.ts                  Express app construction (no listening)
 │   └── server.ts               Local entrypoint: connect DB, listen, process handlers
@@ -269,9 +272,42 @@ Two consequences worth knowing:
   `{ ownerId, deletedAt, createdAt }` keeps the list query from degrading now that
   it filters on two fields.
 
-There is **no restore endpoint**. Recovery is a manual database update today.
-Adding one is a new API contract plus an authorization question (who may restore
-what), so it belongs in its own piece of work.
+### Restore
+
+`POST /media/:id/restore` clears `deletedAt` and the item returns to every read.
+Owner-only, same as every other media route. It 404s on an item that was never
+deleted, on an id that does not exist, and on a second restore — reporting success
+twice would misrepresent what happened.
+
+Once the purge job has run, restore 404s permanently. That is the deal the
+retention window makes.
+
+### The purge job
+
+A daily Vercel Cron hits `GET /api/cron/purge-deleted-media`, which hard-deletes
+items soft-deleted longer ago than `MEDIA_RETENTION_DAYS` (default 30) and
+destroys their Cloudinary assets.
+
+```json
+{ "crons": [{ "path": "/api/cron/purge-deleted-media", "schedule": "0 3 * * *" }] }
+```
+
+Four things worth knowing:
+
+- **Order is asset first, then row.** If destroying the asset fails we leave the
+  row alone so the next run retries it. The other order would drop the row and
+  orphan the file permanently, with nothing left pointing at it to clean up.
+- **Each item is independent.** One unreachable asset does not abort the batch;
+  the response reports `purged` and `failed` counts.
+- **Batched** at `MEDIA_PURGE_BATCH_LIMIT` (default 100) so one run cannot exceed
+  the function timeout. Hitting the limit logs a warning — more work is pending.
+- **Authenticated by `CRON_SECRET`,** which Vercel sends as a Bearer token. The
+  endpoint fails closed: if `CRON_SECRET` is unset it rejects everything, because
+  an open hard-delete endpoint is worse than a cron that never runs.
+
+**Hobby plan limit:** crons run at most once per day, and a more frequent
+expression fails the deployment. Vercel may also fire it anywhere within the
+scheduled hour.
 
 ---
 

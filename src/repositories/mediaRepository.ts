@@ -74,3 +74,35 @@ export const updateMediaById = async (
         runValidators: true,
     });
 };
+
+/**
+ * The one read that deliberately ignores the deletedAt filter. Restore needs to
+ * see the deleted document, and the ownership check needs it too — otherwise
+ * restore couldn't tell "not yours" from "doesn't exist".
+ */
+export const findDeletedMediaById = async (id: string): Promise<MediaDoc | null> => {
+    return await Media.findOne({ _id: id, deletedAt: { $ne: null } });
+};
+
+export const restoreMediaById = async (id: string): Promise<MediaDoc | null> => {
+    return await Media.findOneAndUpdate(
+        { _id: id, deletedAt: { $ne: null } },
+        { deletedAt: null },
+        { returnDocument: "after" }
+    );
+};
+
+/**
+ * Purge candidates: soft-deleted longer ago than the retention window. Capped
+ * because the caller has to destroy a Cloudinary asset per row and a serverless
+ * invocation has a wall clock to respect.
+ */
+export const findMediaDeletedBefore = async (cutoff: Date, limit: number): Promise<MediaDoc[]> => {
+    return await Media.find({ deletedAt: { $ne: null, $lt: cutoff } })
+        .sort({ deletedAt: 1 })
+        .limit(limit);
+};
+
+export const hardDeleteMediaById = async (id: string): Promise<MediaDoc | null> => {
+    return await Media.findByIdAndDelete(id);
+};

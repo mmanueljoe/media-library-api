@@ -5,4 +5,8 @@ export {
     findMediaById,
     softDeleteMediaById,
     updateMediaById,
+    findDeletedMediaById,
+    restoreMediaById,
+    findMediaDeletedBefore,
+    hardDeleteMediaById,
 } from "./mediaRepository.js";

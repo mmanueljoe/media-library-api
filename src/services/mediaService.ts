@@ -9,6 +9,10 @@ import {
     findMediaById as findMediaByIdRepository,
     findMediaByOwner as findMediaByOwnerRepository,
     updateMediaById as updateMediaByIdRepository,
+    findDeletedMediaById as findDeletedMediaByIdRepository,
+    restoreMediaById as restoreMediaByIdRepository,
+    findMediaDeletedBefore as findMediaDeletedBeforeRepository,
+    hardDeleteMediaById as hardDeleteMediaByIdRepository,
 } from "@/repositories/mediaRepository.js";
 
 const CLOUDINARY_FOLDER = "media-library";
@@ -144,6 +148,73 @@ export const deleteMedia = async (ownerId: string, mediaId: string) => {
     );
 
     return { id: media._id.toString() };
+};
+
+export const restoreMedia = async (ownerId: string, mediaId: string) => {
+    const media = await findDeletedMediaByIdRepository(mediaId);
+
+    if (!media) throw new AppError("Deleted media not found", 404);
+
+    if (media.ownerId.toString() !== ownerId) throw new AppError("Forbidden", 403);
+
+    const restored = await restoreMediaByIdRepository(mediaId);
+
+    if (!restored) throw new AppError("Deleted media not found", 404);
+
+    logger.info({ mediaId, ownerId, publicId: media.publicId }, "media restored");
+
+    return restored;
+};
+
+export const purgeDeletedMedia = async (input: {
+    retentionDays: number;
+    batchLimit: number;
+}): Promise<{ purged: number; failed: number; cutoff: string }> => {
+    const cutoff = new Date(Date.now() - input.retentionDays * 24 * 60 * 60 * 1000);
+
+    const candidates = await findMediaDeletedBeforeRepository(cutoff, input.batchLimit);
+
+    let purged = 0;
+    let failed = 0;
+
+    for (const media of candidates) {
+        try {
+            await cloudinary.uploader.destroy(media.publicId, {
+                resource_type: mimeToResourceType(media.mimeType),
+            });
+
+            await hardDeleteMediaByIdRepository(media._id.toString());
+            purged++;
+        } catch (err: unknown) {
+            failed++;
+            logger.error(
+                { err, mediaId: media._id.toString(), publicId: media.publicId },
+                "failed to purge media — will retry on the next run"
+            );
+        }
+    }
+
+    logger.info(
+        {
+            purged,
+            failed,
+            candidates: candidates.length,
+            cutoff: cutoff.toISOString(),
+            retentionDays: input.retentionDays,
+        },
+        "purge of soft-deleted media finished"
+    );
+
+    // A full batch means there's probably more waiting. Surfaced so it's visible
+    // in the cron response and logs rather than silently taking days to drain.
+    if (candidates.length === input.batchLimit) {
+        logger.warn(
+            { batchLimit: input.batchLimit },
+            "purge hit its batch limit — more items are still pending"
+        );
+    }
+
+    return { purged, failed, cutoff: cutoff.toISOString() };
 };
 
 export const updateMedia = async (
