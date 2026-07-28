@@ -50,7 +50,7 @@ Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer + Clo
 
 ## Requirements
 
-- Node.js **22.22.1** or newer (see `.nvmrc`)
+- Node.js **22.x** — pinned to the major in `engines` and `.nvmrc`, so Vercel cannot silently move you onto a new Node major
 - **Yarn** (the project uses `yarn.lock`)
 - A MongoDB instance — local install **or** MongoDB Atlas connection string
 
@@ -147,6 +147,7 @@ media-library-api/
 ├── .gitignore
 ├── .prettierrc
 ├── .prettierignore
+├── public/                     Stub static output — see Deployment for why it exists
 ├── .vercelignore
 ├── eslint.config.js
 ├── package.json
