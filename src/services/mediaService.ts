@@ -6,8 +6,8 @@ import {
     findMediaById as findMediaByIdRepository,
     findMediaByOwner as findMediaByOwnerRepository,
     updateMediaById as updateMediaByIdRepository,
+    createAuditLog,
 } from "../repositories/index.js";
-import { createAuditLog } from "../repositories/index.js";
 
 export const createMedia = async (input: {
     ownerId: string;

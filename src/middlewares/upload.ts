@@ -1,5 +1,6 @@
 import multer, { type FileFilterCallback } from "multer";
 import { type Request } from "express";
+import { AppError } from "../utils/index.js";
 
 const storage = multer.diskStorage({
     destination: (_req, _file, cb) => {
@@ -20,7 +21,7 @@ const fileFilter: multer.Options["fileFilter"] = (
     if (allowedMimeTypes.has(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new Error("Invalid file type"));
+        cb(new AppError("Invalid file type", 400));
     }
 };
 
