@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Media } from "@/models/index.js";
 import { cloudinary } from "@/config/cloudinary.js";
+import { env } from "@/config/env.js";
 import { useTestDatabase } from "../setup/mongo.js";
 import { api, authHeader, registerUser } from "../helpers/app.js";
 
 useTestDatabase();
 
-const CRON_AUTH = { Authorization: "Bearer test-cron-secret-at-least-16-chars" };
+// Read from env rather than hardcoding. CI can supply different values than
+// .env.test does, and a test that hardcodes one of them fails there and nowhere
+// else — which is exactly how this first broke.
+const CRON_AUTH = { Authorization: `Bearer ${env.CRON_SECRET}` };
 const PURGE_URL = "/api/cron/purge-deleted-media";
-const RETENTION_DAYS = 30;
+const RETENTION_DAYS = env.MEDIA_RETENTION_DAYS;
 
 const fakePng = (): Buffer => Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 

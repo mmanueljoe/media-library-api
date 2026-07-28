@@ -6,12 +6,12 @@ vi.mock("@/config/db.js", () => ({
     connectDB: vi.fn().mockRejectedValue(new Error("database is down")),
 }));
 
+const { env } = await import("@/config/env.js");
 const { resetRateLimits } = await import("@/middlewares/rateLimit.js");
 const { api } = await import("../helpers/app.js");
 
 describe("rate limiting runs before the database connection", () => {
-    // .env.test sets AUTH_RATE_LIMIT_MAX_REQUESTS=5.
-    const limit = 5;
+    const limit = env.AUTH_RATE_LIMIT_MAX_REQUESTS;
 
     beforeEach(() => {
         resetRateLimits();

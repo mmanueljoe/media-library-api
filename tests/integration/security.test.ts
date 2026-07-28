@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { useTestDatabase } from "../setup/mongo.js";
+import { env } from "@/config/env.js";
 import { api, registerUser } from "../helpers/app.js";
 
 useTestDatabase();
@@ -21,10 +22,12 @@ describe("security headers", () => {
 });
 
 describe("CORS", () => {
-    it("allows an origin on the allowlist", async () => {
-        const res = await api().get("/health").set("Origin", "https://app.test.local");
+    const allowedOrigin = env.CORS_ORIGINS[0]!;
 
-        expect(res.headers["access-control-allow-origin"]).toBe("https://app.test.local");
+    it("allows an origin on the allowlist", async () => {
+        const res = await api().get("/health").set("Origin", allowedOrigin);
+
+        expect(res.headers["access-control-allow-origin"]).toBe(allowedOrigin);
     });
 
     it("does not echo an origin that is not on the allowlist", async () => {
@@ -42,8 +45,7 @@ describe("CORS", () => {
 });
 
 describe("auth rate limiting", () => {
-    // .env.test sets AUTH_RATE_LIMIT_MAX_REQUESTS=5.
-    const limit = 5;
+    const limit = env.AUTH_RATE_LIMIT_MAX_REQUESTS;
 
     it("blocks once the failed-attempt budget is spent", async () => {
         await registerUser("victim@test.local", "correct-password");
