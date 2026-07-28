@@ -3,6 +3,6 @@ export {
     createMedia,
     findMediaByOwner,
     findMediaById,
-    deleteMediaById,
+    softDeleteMediaById,
     updateMediaById,
 } from "./mediaRepository.js";

@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { AppError } from "@/utils/AppError.js";
 import { isDuplicateKeyError } from "@/utils/mongoErrors.js";
 import { env } from "@/config/env.js";
+import { logger } from "@/config/logger.js";
 import { type UserDoc } from "@/models/user.js";
 import bcrypt from "bcryptjs";
 
@@ -32,6 +33,8 @@ export const register = async (email: string, password: string) => {
         expiresIn: env.JWT_EXPIRES_IN as Exclude<jwt.SignOptions["expiresIn"], undefined>,
     });
 
+    logger.info({ userId: newUser._id.toString(), email: normalizedEmail }, "user registered");
+
     return {
         user: {
             id: newUser._id,
@@ -45,15 +48,26 @@ export const login = async (email: string, password: string) => {
     const normalizedEmail = email.toLowerCase();
     const user = await findUserByEmail(normalizedEmail);
 
-    if (!user) throw new AppError("Invalid credentials", 401);
+    if (!user) {
+        logger.warn({ email: normalizedEmail, reason: "unknown_email" }, "login failed");
+        throw new AppError("Invalid credentials", 401);
+    }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
-    if (!isPasswordValid) throw new AppError("Invalid credentials", 401);
+    if (!isPasswordValid) {
+        logger.warn(
+            { userId: user._id.toString(), email: normalizedEmail, reason: "wrong_password" },
+            "login failed"
+        );
+        throw new AppError("Invalid credentials", 401);
+    }
 
     const token = jwt.sign({ userId: user._id }, env.JWT_SECRET, {
         expiresIn: env.JWT_EXPIRES_IN as Exclude<jwt.SignOptions["expiresIn"], undefined>,
     });
+
+    logger.info({ userId: user._id.toString(), email: normalizedEmail }, "login succeeded");
 
     return {
         user: {

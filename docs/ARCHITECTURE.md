@@ -333,7 +333,7 @@ This is the order we will write the code. Each step leaves the app runnable, so 
 | POST   | `/api/v1/media`         | ✅   | Upload one file + metadata              |
 | GET    | `/api/v1/media`         | ✅   | List own media (filter/search/paginate) |
 | GET    | `/api/v1/media/:id`     | ✅   | Get one media item (owner only)         |
-| PUT    | `/api/v1/media/:id`     | ✅   | Update metadata (owner only)            |
+| PATCH  | `/api/v1/media/:id`     | ✅   | Update metadata (owner only)            |
 | DELETE | `/api/v1/media/:id`     | ✅   | Delete media + file (owner only)        |
 | GET    | `/health`               | —    | Liveness probe                          |
 

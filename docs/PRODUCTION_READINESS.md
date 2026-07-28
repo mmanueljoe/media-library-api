@@ -34,7 +34,7 @@ Each line is a deliberate choice with the alternative considered.
 | Env loader           | **`dotenv` + Zod, extended for multi-env**           | `dotenv.config({ path: \`.env.\${NODE_ENV}\` })`, then the existing Zod schema. ~5 lines of new code. `dotenv-flow`would add a dependency for behavior we should understand. In real production,`.env.production`is never deployed — Vercel injects vars at runtime — so the file is a learning fiction;`.gitignore` enforces this.                                                                                                           |
 | Logger               | **Pino** (already in place)                          | Fast, JSON by default, `pino-pretty` for dev. We extend it with a request-logging middleware and add explicit log calls at the events the lab requires. We do **not** switch to Winston — Pino is already wired and is faster.                                                                                                                                                                                                                |
 | Package manager      | **Yarn** (the repo has `yarn.lock`)                  | CI uses `yarn install --frozen-lockfile`. Switching to npm now would mean deleting `yarn.lock` and producing a new `package-lock.json` — a churn commit with no payoff. Mixing both is the real anti-pattern. The lab's `npm ci` example is illustrative, not prescriptive.                                                                                                                                                                   |
-| Node version         | **20 LTS**, pinned via `.nvmrc` and `engines`        | Same version used in dev, CI, and Vercel. `.nvmrc` lets `nvm use` pick the right version locally; the GitHub Actions workflow reads it; Vercel respects `engines.node`.                                                                                                                                                                                                                                                                       |
+| Node version         | **22 LTS**, pinned via `.nvmrc` and `engines`        | Same version used in dev, CI, and Vercel. `.nvmrc` lets `nvm use` pick the right version locally; the GitHub Actions workflow reads it; Vercel respects `engines.node`.                                                                                                                                                                                                                                                                       |
 | Deployment           | **Vercel**                                           | The lab specifies it. Free hobby tier, GitHub-integrated, automatic preview deploys per PR. The serverless model forces us to confront ephemeral storage (resolved via Cloudinary) and stateless design — both good lessons.                                                                                                                                                                                                                  |
 | Branch model         | **Git Flow (`main` + `develop` + feature branches)** | `main` holds the stable, submitted state. `develop` is the integration branch for the production-readiness work. Feature branches (`feat/*`, `chore/*`, etc.) PR into `develop`. When ready, `develop` PRs into `main`. Matches what the lab asks for and mirrors real-team release flow.                                                                                                                                                     |
 | CI provider          | **GitHub Actions**                                   | The lab specifies it. Free for public repos and generous for private. Native to where the code lives.                                                                                                                                                                                                                                                                                                                                         |
@@ -279,14 +279,50 @@ Set via the Vercel **dashboard**, not the CLI. The lab is explicit about this �
 
 `UPLOAD_DIR` no longer exists — see above. Nothing writes to disk, so Vercel's read-only filesystem is a non-issue rather than something to work around.
 
-### Known Vercel limitations (documented for the lab)
+### Known Vercel limitations
 
-| Limitation                              | Our response                                                                                    |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Ephemeral filesystem                    | All uploads go through Cloudinary. No `fs.writeFile` in any request handler.                    |
-| Cold starts                             | Mongo connection is created lazily and cached across invocations in the same warm container.    |
-| 10-second function timeout (hobby tier) | Acceptable for this API. Larger Cloudinary uploads could hit it; we set Multer's limit to 5 MB. |
-| No persistent in-memory state           | We do not use in-memory caches. JWT verification is stateless.                                  |
+| Limitation                    | Our response                                                                                                                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ephemeral filesystem          | All uploads go through Cloudinary. No `fs.writeFile` in any request handler. See below.                                                                                                       |
+| Request body capped at ~4.5MB | Enforced at Vercel's edge, before our code runs — so Multer's limit and its error message never fire above that. `MAX_FILE_SIZE_MB` stays at 5 to match the spec, but ~4 is the real ceiling. |
+| Cold starts                   | Mongo connection is cached on `globalThis` and reused across invocations in the same warm container.                                                                                          |
+| Function timeout              | A slow upload streaming through the function can exceed it. Tunable via `functions.maxDuration` in `vercel.json` if it becomes a problem.                                                     |
+| No persistent in-memory state | No in-memory caches; JWT verification is stateless. The one place this bites is rate-limit counters — see the README's _Known gap_.                                                           |
+
+### Upload persistence: why Cloudinary, and what the alternatives were
+
+The ephemeral filesystem is the constraint that shaped this decision. Vercel
+destroys the container after a request, so anything written to disk is gone —
+`multer.diskStorage()` would appear to work locally and silently lose every file
+in production. Uploads use `memoryStorage()` and stream the buffer straight to
+Cloudinary, so no file ever touches disk.
+
+Three ways to satisfy that constraint:
+
+| Option                   | What you get                                                                                | What it costs                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Cloudinary** (chosen)  | Storage, CDN, and on-the-fly image transforms in one service. Upload is one SDK call.       | Vendor lock-in on the transform URLs. Gets expensive well before S3 does.         |
+| **AWS S3**               | Cheapest at scale, and the industry default. Full control over lifecycle rules and regions. | Storage only. A CDN (CloudFront) and any resizing are yours to build and operate. |
+| **Other object storage** | Cloudflare R2, Backblaze B2 — S3-compatible APIs, no egress fees.                           | Same as S3: raw storage, no transforms, less tooling and fewer eyes on it.        |
+
+**Why Cloudinary here:** this is an image and PDF library, so serving a thumbnail
+grid matters more than storage cost. Cloudinary does that with a URL parameter;
+with S3 it's a resize pipeline plus CloudFront plus cache invalidation — real
+infrastructure for a feature we'd get free. At this scale the cost difference is
+noise, and correctness beats theoretical savings.
+
+**When that flips:** once storage volume makes the bill material, or transforms
+stop being needed, S3 becomes the right answer. The migration is contained —
+`mediaService` is the only module that talks to Cloudinary, and the media document
+already stores a `url` and `publicId` rather than anything Cloudinary-shaped.
+
+**What neither option fixes** is the ~4.5MB request cap, because the file still
+passes through the function. The production answer is a **presigned upload**: the
+API hands the browser a short-lived signature, the browser uploads directly to
+Cloudinary or S3, and only the resulting URL comes back to us. That sidesteps both
+the body limit and the function timeout, since the bytes never touch our
+infrastructure. Not implemented — it changes the client contract, so it belongs in
+its own piece of work rather than a deploy change.
 
 ---
 
@@ -353,7 +389,7 @@ A single collection `Media Library API`, with two environments:
 
 ### Variables used throughout
 
-`{{BASE_URL}}`, `{{TOKEN}}`, `{{MEDIA_ID}}`. The collection's pre-request scripts log in once and stash the token; the upload request stashes the new media's `_id` into `{{MEDIA_ID}}` so subsequent GET/PUT/DELETE requests use it without manual editing.
+`{{BASE_URL}}`, `{{TOKEN}}`, `{{MEDIA_ID}}`. The collection's pre-request scripts log in once and stash the token; the upload request stashes the new media's `_id` into `{{MEDIA_ID}}` so subsequent GET/PATCH/DELETE requests use it without manual editing.
 
 ### Per-request tests
 
@@ -422,8 +458,11 @@ The order minimizes risk: each step leaves a runnable, testable project. We do n
 12. **Postman production verification**
     Switch Postman to the Production environment, run the full collection against the live URL. Every test should pass.
 
-13. **(Bonus) Uptime monitoring**
-    Point UptimeRobot or Better Uptime at `/health`. Configure email/slack on downtime.
+13. **(Bonus) Monitoring**
+    Enable Vercel Analytics in the project dashboard, and point UptimeRobot or
+    Better Uptime at `/health` with alerting on any non-200. Both are dashboard
+    setup, not code — `/health` already returns the `200`/`503` split they need.
+    Documented in the README's Monitoring section.
 
 14. **Final merge**
     Open `develop` → `main` PR. Once green, merge. `main` now reflects the production-ready state.

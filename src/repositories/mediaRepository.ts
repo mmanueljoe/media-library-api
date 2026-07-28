@@ -30,7 +30,10 @@ export const findMediaByOwner = async (
 ): Promise<{ total: number; results: MediaDoc[] }> => {
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, unknown> = { ownerId } as unknown as Record<string, unknown>;
+    const filter: Record<string, unknown> = { ownerId, deletedAt: null } as unknown as Record<
+        string,
+        unknown
+    >;
     if (options?.category) filter.category = options.category;
     if (options?.tags?.length) filter.tags = { $in: options.tags };
     if (options?.search) filter.$text = { $search: options.search };
@@ -51,19 +54,23 @@ export const findMediaByOwner = async (
 };
 
 export const findMediaById = async (id: string): Promise<MediaDoc | null> => {
-    return await Media.findById(id);
+    return await Media.findOne({ _id: id, deletedAt: null });
 };
 
-export const deleteMediaById = async (id: string): Promise<MediaDoc | null> => {
-    return await Media.findByIdAndDelete(id);
+export const softDeleteMediaById = async (id: string): Promise<MediaDoc | null> => {
+    return await Media.findOneAndUpdate(
+        { _id: id, deletedAt: null },
+        { deletedAt: new Date() },
+        { returnDocument: "after" }
+    );
 };
 
 export const updateMediaById = async (
     id: string,
     patch: Partial<Pick<CreateMediaInput, "title" | "tags" | "category">>
 ): Promise<MediaDoc | null> => {
-    return await Media.findByIdAndUpdate(id, patch, {
-        new: true,
+    return await Media.findOneAndUpdate({ _id: id, deletedAt: null }, patch, {
+        returnDocument: "after",
         runValidators: true,
     });
 };

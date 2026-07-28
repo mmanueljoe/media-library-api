@@ -13,12 +13,13 @@ Built with TypeScript, Express 5, MongoDB (Mongoose), JWT auth, and Multer + Clo
 
 - **Authentication** — JWT-based register / login. Tokens carry the user identity.
 - **Ownership model** — every media item belongs to one user. Only the owner can update or delete.
+- **Soft delete** — deletes are recoverable; the row is stamped, not removed. See [Soft delete](#soft-delete).
 - **File uploads** — accepts `image/jpeg`, `image/png`, and `application/pdf` via `multipart/form-data`. Max 5 MB per file.
 - **Metadata** — every upload stores a title, optional tags, a category, plus the file path, original filename, MIME type, and size.
 - **Search, filter, paginate** — list endpoint supports full-text search on title, tag filtering, category filtering, pagination, and sorting in one call.
 - **Consistent response envelope** — every success and error response follows the same JSON shape.
 - **Centralized error handling** — single global error middleware turns thrown errors into properly-formatted responses.
-- **Structured logging** — Pino logs in JSON for production, pretty-printed in development.
+- **Structured logging** — Pino JSON logs, every line correlated by request id, secrets redacted. See [Logging](#logging).
 - **Fail-fast configuration** — missing or malformed env vars crash the app at boot with a clear message.
 - **Hardened by default** — Helmet security headers, a CORS allowlist, and per-IP rate limiting that's tighter on the credential endpoints. See [Security](#security).
 - **Deploys to Vercel** — the same Express app runs as a long-lived local server or a serverless function. See [Deployment](#deployment-vercel).
@@ -122,7 +123,7 @@ media-library-api/
 │   └── index.js                Vercel entry — exports the app, no listen()
 ├── docs/                       Architectural and setup documentation
 ├── src/
-│   ├── config/                 env loading, logger, db, cloudinary, cors
+│   ├── config/                 env loading, logger, db, cloudinary, cors, requestContext
 │   ├── routes/                 URL → controller wiring (no logic)
 │   ├── controllers/            Request/response handling (delegates to services)
 │   ├── services/               Business rules and orchestration
@@ -213,14 +214,14 @@ All `/media` endpoints require a valid JWT in the `Authorization: Bearer <token>
 | `POST`   | `/media`     | Upload one file with metadata (multipart form, `file` field + `title`, `tags`, `category`). |
 | `GET`    | `/media`     | List your media with filters, search, and pagination.                                       |
 | `GET`    | `/media/:id` | Get a single media item (owner only).                                                       |
-| `PUT`    | `/media/:id` | Update metadata (owner only).                                                               |
-| `DELETE` | `/media/:id` | Delete the media item and its asset from Cloudinary (owner only).                           |
+| `PATCH`  | `/media/:id` | Update metadata (owner only).                                                               |
+| `DELETE` | `/media/:id` | Soft-delete the media item (owner only). See [Soft delete](#soft-delete).                   |
 
 ### Health
 
-| Method | Endpoint  | Description                                                    |
-| ------ | --------- | -------------------------------------------------------------- |
-| `GET`  | `/health` | Liveness probe — returns `{ status: "ok" }`. No auth required. |
+| Method | Endpoint  | Description                                                                                                                   |
+| ------ | --------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/health` | Liveness probe. `200` when Mongo is reachable, `503` when it isn't. No auth, not rate-limited. See [Monitoring](#monitoring). |
 
 ### `GET /media` query parameters
 
@@ -241,6 +242,36 @@ All `/media` endpoints require a valid JWT in the `Authorization: Bearer <token>
 - **Allowed categories:** `image`, `document`
 
 Unsupported file types or oversized files return `400` with a descriptive error message.
+
+---
+
+## Soft delete
+
+`DELETE /media/:id` stamps a `deletedAt` timestamp instead of removing the
+document. Nothing about the response changes — still `200` with the id — and the
+item disappears from every read: get-by-id, list, search, and update all `404`.
+
+Why: an accidental delete is otherwise unrecoverable, and the row is the only
+record that the upload ever happened. Keeping it means a mistake is a database
+update away from being fixed rather than gone for good.
+
+Two consequences worth knowing:
+
+- **The Cloudinary asset is deliberately _not_ destroyed.** Destroying it would
+  leave a restorable record pointing at a file that no longer exists, which
+  defeats the point. So assets for deleted media accumulate and nothing reclaims
+  them yet — the missing piece is a scheduled job that hard-deletes rows past a
+  retention window and destroys their assets in the same pass. Not built; it needs
+  a cron and a retention-policy decision.
+- **Every read path has to filter `deletedAt: null`.** That's enforced in
+  [mediaRepository.ts](src/repositories/mediaRepository.ts) rather than sprinkled
+  through the services, so there's one place to get it right. A compound index on
+  `{ ownerId, deletedAt, createdAt }` keeps the list query from degrading now that
+  it filters on two fields.
+
+There is **no restore endpoint**. Recovery is a manual database update today.
+Adding one is a new API contract plus an authorization question (who may restore
+what), so it belongs in its own piece of work.
 
 ---
 
@@ -313,6 +344,90 @@ because serverless has no boot step to hang the connection off.
 yarn build && yarn start   # production build, long-lived server
 vercel dev                 # emulates the serverless runtime and vercel.json
 ```
+
+---
+
+## Logging
+
+Pino, structured JSON in production and pretty-printed in development, level set
+by `LOG_LEVEL`.
+
+**Every line carries a `requestId`.** It comes from Vercel's `x-vercel-id` when
+present, so our logs line up with Vercel's own function logs for the same request;
+otherwise one is generated. It's also echoed back as the `x-request-id` response
+header, so a user reporting a problem can quote it.
+
+The id travels via `AsyncLocalStorage` ([requestContext.ts](src/config/requestContext.ts))
+and gets attached by a Pino mixin. That's why no call site passes it in — services
+stay free of HTTP concepts, and nothing had to change to gain correlation.
+
+What gets logged:
+
+| Event                | Level             | Carries                                        |
+| -------------------- | ----------------- | ---------------------------------------------- |
+| Every request        | `info`            | method, path, status, duration, `userId`       |
+| Register / login OK  | `info`            | `userId`, email                                |
+| Login failed         | `warn`            | email, and `unknown_email` vs `wrong_password` |
+| Rate limit tripped   | `warn`            | IP, path                                       |
+| Upload / soft delete | `info`            | media id, owner, Cloudinary `publicId`         |
+| 4xx                  | `warn`            | error, method, path, status                    |
+| 5xx and crashes      | `error` / `fatal` | error and stack                                |
+
+The failed-login split is intentional: scattered unknown emails is someone
+spraying a leaked list, repeated wrong passwords on one real account is someone
+targeting it. Those are different incidents. The **response** is an identical
+`Invalid credentials` either way, so the distinction never reaches the client.
+
+**Secrets are redacted** at the logger, not the call site — `password`,
+`passwordHash`, `token`, and `authorization` headers are replaced with
+`[Redacted]` wherever they appear in a log object. Nothing currently logs a
+request body; this is the guardrail for when someone does it while debugging.
+
+Not set up: **error tracking**. Logs go to Vercel's log drain, which is searchable
+but doesn't alert — nobody gets paged on a spike in 500s. Sentry or similar is the
+next thing worth adding.
+
+---
+
+## Monitoring
+
+Two layers, because they answer different questions. Vercel can tell you how the
+app is behaving, but it can't tell you it's down — something outside the platform
+has to watch for that.
+
+| Layer                | What it answers                                         | Setup                                                 |
+| -------------------- | ------------------------------------------------------- | ----------------------------------------------------- |
+| **Vercel Analytics** | Traffic, response times, error rates, cold-start counts | Project → Analytics → enable. No code changes.        |
+| **UptimeRobot**      | Is the API reachable from outside right now?            | Add an HTTP monitor on `GET /health`, 5-min interval. |
+
+### What the uptime check is actually testing
+
+`GET /health` is unauthenticated and unrate-limited on purpose — a monitor polls
+it far more often than the rate limit allows, and an uptime check that needs
+credentials is one more thing to expire silently.
+
+It probes the database before answering, so it reports on the connection rather
+than merely on the process being alive:
+
+| Response                                        | Meaning                                               |
+| ----------------------------------------------- | ----------------------------------------------------- |
+| `200` `{ status: "ok", db: "connected" }`       | Function is running and Mongo is reachable.           |
+| `503` `{ status: "error", db: "disconnected" }` | Function is running but Mongo is not reachable.       |
+| No response / timeout                           | The deployment itself is down or the build is broken. |
+
+The `503` case is the useful one: it distinguishes "your app is broken" from
+"Atlas is refusing connections," which are different incidents with different
+fixes. Configure the alert on any non-200 so both are caught.
+
+`uptime` in the payload is `process.uptime()` — seconds since _this container_
+started, not since the last deploy. On serverless it resets on every cold start,
+so treat it as a cold-start signal, not as an availability metric. Availability
+is what UptimeRobot measures.
+
+### Not set up
+
+Error tracking — see the Logging section above. Everything else here is dashboard
+setup on your side; the code already returns what these tools need.
 
 ---
 

@@ -5,7 +5,7 @@ import { cloudinary, mimeToResourceType } from "@/config/cloudinary.js";
 import { AppError } from "@/utils/AppError.js";
 import {
     createMedia as createMediaRepository,
-    deleteMediaById as deleteMediaByIdRepository,
+    softDeleteMediaById as softDeleteMediaByIdRepository,
     findMediaById as findMediaByIdRepository,
     findMediaByOwner as findMediaByOwnerRepository,
     updateMediaById as updateMediaByIdRepository,
@@ -134,15 +134,14 @@ export const deleteMedia = async (ownerId: string, mediaId: string) => {
 
     if (media.ownerId.toString() !== ownerId) throw new AppError("Forbidden", 403);
 
-    try {
-        await cloudinary.uploader.destroy(media.publicId, {
-            resource_type: mimeToResourceType(media.mimeType),
-        });
-    } catch (err: unknown) {
-        logger.warn({ err, publicId: media.publicId }, "Failed to delete asset from Cloudinary");
-    }
+    const deleted = await softDeleteMediaByIdRepository(mediaId);
 
-    await deleteMediaByIdRepository(mediaId);
+    if (!deleted) throw new AppError("Media not found", 404);
+
+    logger.info(
+        { mediaId: media._id.toString(), ownerId, publicId: media.publicId },
+        "media soft deleted"
+    );
 
     return { id: media._id.toString() };
 };
