@@ -37,9 +37,16 @@
                         }
                     ],
                     "request": {
-                        "auth": { "type": "noauth" },
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "POST",
-                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
                         "body": {
                             "mode": "raw",
                             "raw": "{\n  \"email\": \"demo@test.local\",\n  \"password\": \"password123\"\n}"
@@ -69,9 +76,16 @@
                         }
                     ],
                     "request": {
-                        "auth": { "type": "noauth" },
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "POST",
-                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
                         "body": {
                             "mode": "raw",
                             "raw": "{\n  \"email\": \"demo@test.local\",\n  \"password\": \"password123\"\n}"
@@ -139,10 +153,26 @@
                         "body": {
                             "mode": "formdata",
                             "formdata": [
-                                { "key": "title", "value": "Demo upload", "type": "text" },
-                                { "key": "category", "value": "image", "type": "text" },
-                                { "key": "tags", "value": "demo", "type": "text" },
-                                { "key": "file", "type": "file", "src": [] }
+                                {
+                                    "key": "title",
+                                    "value": "Demo upload",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "category",
+                                    "value": "image",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "tags",
+                                    "value": "demo",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
                             ]
                         },
                         "url": {
@@ -184,13 +214,39 @@
                             "host": ["{{BASE_URL}}"],
                             "path": ["media"],
                             "query": [
-                                { "key": "page", "value": "1" },
-                                { "key": "limit", "value": "10" },
-                                { "key": "category", "value": "image", "disabled": true },
-                                { "key": "search", "value": "demo", "disabled": true },
-                                { "key": "tags", "value": "demo,important", "disabled": true },
-                                { "key": "sortBy", "value": "createdAt", "disabled": true },
-                                { "key": "order", "value": "desc", "disabled": true }
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "category",
+                                    "value": "image",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "demo",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "tags",
+                                    "value": "demo,important",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "sortBy",
+                                    "value": "createdAt",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "order",
+                                    "value": "desc",
+                                    "disabled": true
+                                }
                             ]
                         },
                         "description": "Optional query params (disabled by default — enable in the Params tab to test):\n- `category` — `image` or `document`\n- `search` — full-text search on title\n- `tags` — comma-separated\n- `sortBy` — `createdAt` or `title`\n- `order` — `asc` or `desc`"
@@ -238,8 +294,13 @@
                         }
                     ],
                     "request": {
-                        "method": "PUT",
-                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
                         "body": {
                             "mode": "raw",
                             "raw": "{\n  \"title\": \"Updated title\"\n}"
@@ -275,6 +336,63 @@
                             "path": ["media", "{{MEDIA_ID}}"]
                         }
                     }
+                },
+                {
+                    "name": "Get Deleted Media (404)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "// Run straight after Delete Media. Soft delete keeps the row in the database",
+                                    "// but every read path filters it out, so this must look identical to a",
+                                    "// never-existed id.",
+                                    "pm.test('status is 404', () => pm.response.to.have.status(404));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('envelope is error', () => pm.expect(body.status).to.eql('error'));",
+                                    "pm.test('does not leak that the row still exists', () => pm.expect(body).to.not.have.property('data'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/{{MEDIA_ID}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "{{MEDIA_ID}}"]
+                        },
+                        "description": "Deletes are soft — the document is stamped with deletedAt rather than removed. This confirms it is invisible to reads. Run it after Delete Media."
+                    }
+                },
+                {
+                    "name": "Restore Media",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "// Run after Delete Media. Undoes the soft delete while the row is still",
+                                    "// inside the retention window.",
+                                    "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('envelope is success', () => pm.expect(body.status).to.eql('success'));",
+                                    "pm.test('deletedAt is cleared', () => pm.expect(body.data.deletedAt).to.eql(null));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": {
+                            "raw": "{{BASE_URL}}/media/{{MEDIA_ID}}/restore",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["media", "{{MEDIA_ID}}", "restore"]
+                        },
+                        "description": "Owner-only. 404s if the item was never deleted, or if the purge cron has already hard-deleted it."
+                    }
                 }
             ]
         },
@@ -299,7 +417,9 @@
                         }
                     ],
                     "request": {
-                        "auth": { "type": "noauth" },
+                        "auth": {
+                            "type": "noauth"
+                        },
                         "method": "GET",
                         "url": {
                             "raw": "{{HEALTH_URL}}",
@@ -309,12 +429,73 @@
                     }
                 }
             ]
+        },
+        {
+            "name": "Cron",
+            "item": [
+                {
+                    "name": "Purge Deleted Media",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('reports purged and failed counts', () => {",
+                                    "  pm.expect(body.data).to.have.property('purged');",
+                                    "  pm.expect(body.data).to.have.property('failed');",
+                                    "});",
+                                    "// Without the CRON_SECRET variable set this returns 401 — that is correct,",
+                                    "// the endpoint fails closed."
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{CRON_SECRET}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL_ROOT}}/api/cron/purge-deleted-media",
+                            "host": ["{{BASE_URL_ROOT}}"],
+                            "path": ["api", "cron", "purge-deleted-media"]
+                        },
+                        "description": "Normally triggered by Vercel Cron daily, not by hand. Hard-deletes media soft-deleted longer ago than MEDIA_RETENTION_DAYS and destroys their Cloudinary assets. Requires the CRON_SECRET collection variable."
+                    }
+                }
+            ]
         }
     ],
     "variable": [
-        { "key": "BASE_URL", "value": "" },
-        { "key": "HEALTH_URL", "value": "" },
-        { "key": "TOKEN", "value": "" },
-        { "key": "MEDIA_ID", "value": "" }
+        {
+            "key": "BASE_URL",
+            "value": ""
+        },
+        {
+            "key": "HEALTH_URL",
+            "value": ""
+        },
+        {
+            "key": "TOKEN",
+            "value": ""
+        },
+        {
+            "key": "MEDIA_ID",
+            "value": ""
+        },
+        {
+            "key": "CRON_SECRET",
+            "value": ""
+        },
+        {
+            "key": "BASE_URL_ROOT",
+            "value": ""
+        }
     ]
 }

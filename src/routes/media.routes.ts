@@ -1,18 +1,19 @@
 import { Router } from "express";
-import { uploadSingle } from "../middlewares/upload.js";
-import { authenticate } from "../middlewares/authenticate.js";
+import { uploadSingle, authenticate, validate } from "@/middlewares/index.js";
+import {
+    createMediaSchema,
+    listMediaSchema,
+    getMediaByIdSchema,
+    updateMediaSchema,
+} from "@/middlewares/validators/mediaValidator.js";
 import {
     deleteMedia,
     getMediaById,
     updateMedia,
     uploadMedia,
-} from "../controllers/mediaController.js";
-import { createMediaSchema } from "../middlewares/validators/mediaValidator.js";
-import { listMediaSchema } from "../middlewares/validators/mediaValidator.js";
-import { getMediaByIdSchema } from "../middlewares/validators/mediaValidator.js";
-import { updateMediaSchema } from "../middlewares/validators/mediaValidator.js";
-import { validate } from "../middlewares/validate.js";
-import { getMyMedia } from "../controllers/mediaController.js";
+    getMyMedia,
+    restoreMedia,
+} from "@/controllers/mediaController.js";
 
 const mediaRouter = Router();
 
@@ -20,10 +21,15 @@ mediaRouter.post("/", authenticate, uploadSingle("file"), validate(createMediaSc
 
 mediaRouter.get("/", authenticate, validate(listMediaSchema), getMyMedia);
 
+// Registered before /:id so "restore" is never swallowed as an id. The validator
+// would reject it anyway, but relying on that makes the ordering load-bearing
+// and invisible.
+mediaRouter.post("/:id/restore", authenticate, validate(getMediaByIdSchema), restoreMedia);
+
 mediaRouter.get("/:id", authenticate, validate(getMediaByIdSchema), getMediaById);
 
 mediaRouter.delete("/:id", authenticate, validate(getMediaByIdSchema), deleteMedia);
 
-mediaRouter.put("/:id", authenticate, validate(updateMediaSchema), updateMedia);
+mediaRouter.patch("/:id", authenticate, validate(updateMediaSchema), updateMedia);
 
 export { mediaRouter };

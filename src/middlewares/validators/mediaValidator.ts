@@ -48,5 +48,3 @@ export const updateMediaSchema = {
             message: "At least one field must be provided",
         }),
 };
-
-export type CreateMediaInput = z.infer<(typeof createMediaSchema)["body"]>;

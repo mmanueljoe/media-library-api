@@ -1,18 +1,18 @@
 import multer from "multer";
 import type { Request, Response, NextFunction } from "express";
-import { env } from "../config/env.js";
-import { AppError } from "../utils/AppError.js";
+import { env } from "@/config/env.js";
+import { AppError } from "@/utils/AppError.js";
 
 const storage = multer.memoryStorage();
 
-const allowedMimeTypes = ["image/jpeg", "image/png", "application/pdf"];
+const allowedMimeTypes = new Set(["image/jpeg", "image/png", "application/pdf"]);
 
 const fileFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
-    if (allowedMimeTypes.includes(file.mimetype)) {
+    if (allowedMimeTypes.has(file.mimetype)) {
         cb(null, true);
     } else {
         (cb as unknown as (error: Error | null, acceptFile: boolean) => void)(
-            new Error("Invalid file type"),
+            new Error(`Invalid file type. Allowed: ${[...allowedMimeTypes].join(", ")}`),
             false
         );
     }

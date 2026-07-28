@@ -1,5 +1,5 @@
-import { User, type UserDoc } from "../../src/models/user.js";
-import { Media, type MediaDoc } from "../../src/models/media.js";
+import { User, type UserDoc } from "@/models/user.js";
+import { Media, type MediaDoc } from "@/models/media.js";
 
 type UserOverrides = Partial<{
     email: string;
@@ -7,7 +7,9 @@ type UserOverrides = Partial<{
 }>;
 
 export const makeUser = async (overrides: UserOverrides = {}): Promise<UserDoc> => {
-    const email = overrides.email ?? `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.local`;
+    const email =
+        overrides.email ??
+        `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.local`;
     const password = overrides.password ?? "password123";
 
     // The User model has a pre("save") hook that hashes passwordHash.

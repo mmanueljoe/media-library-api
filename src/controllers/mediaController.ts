@@ -1,14 +1,17 @@
 import type { Request, Response } from "express";
-import { catchAsync } from "../utils/catchAsync.js";
+import { catchAsync } from "@/utils/catchAsync.js";
 import {
     createMedia,
     deleteMedia as deleteMediaService,
     getMediaById as getMediaByIdService,
     updateMedia as updateMediaService,
-} from "../services/mediaService.js";
-import { sendSuccess } from "../utils/response.js";
-import { AppError } from "../utils/AppError.js";
-import { getMyMedia as getMyMediaService } from "../services/mediaService.js";
+    getMyMedia as getMyMediaService,
+    restoreMedia as restoreMediaService,
+    purgeDeletedMedia as purgeDeletedMediaService,
+} from "@/services/mediaService.js";
+import { env } from "@/config/env.js";
+import { sendSuccess } from "@/utils/response.js";
+import { AppError } from "@/utils/AppError.js";
 
 export const uploadMedia = catchAsync(async (req: Request, res: Response) => {
     const ownerId = req.user!.id;
@@ -112,4 +115,30 @@ export const updateMedia = catchAsync(async (req: Request, res: Response) => {
     const updated = await updateMediaService(ownerId, id, patch);
 
     sendSuccess(res, updated, 200);
+});
+
+export const restoreMedia = catchAsync(async (req: Request, res: Response) => {
+    const ownerId = req.user!.id;
+    const rawId = req.params.id;
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
+
+    if (!id) throw new AppError("Validation error", 400);
+
+    const restored = await restoreMediaService(ownerId, id);
+
+    sendSuccess(res, restored, 200);
+});
+
+/**
+ * Triggered by Vercel Cron, not by users — see authenticateCron on the route.
+ * Returns the counts so the run's outcome is visible in Vercel's cron log
+ * without having to go digging through application logs.
+ */
+export const purgeDeletedMedia = catchAsync(async (_req: Request, res: Response) => {
+    const result = await purgeDeletedMediaService({
+        retentionDays: env.MEDIA_RETENTION_DAYS,
+        batchLimit: env.MEDIA_PURGE_BATCH_LIMIT,
+    });
+
+    sendSuccess(res, result, 200);
 });

@@ -1,11 +1,11 @@
 import type { Response, Request } from "express";
-import { catchAsync } from "../utils/catchAsync.js";
+import { catchAsync } from "@/utils/catchAsync.js";
 import {
     register as registerUser,
     login as loginUser,
     getCurrentUser,
-} from "../services/authService.js";
-import { sendSuccess } from "../utils/response.js";
+} from "@/services/authService.js";
+import { sendSuccess } from "@/utils/response.js";
 
 export const register = catchAsync(async (req: Request, res: Response) => {
     const { email, password } = req.body;

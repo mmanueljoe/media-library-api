@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Request, Response, NextFunction } from "express";
-import { catchAsync } from "../../src/utils/catchAsync.js";
+import { catchAsync } from "@/utils/catchAsync.js";
 
 const makeReqResNext = () => {
     const req = {} as Request;

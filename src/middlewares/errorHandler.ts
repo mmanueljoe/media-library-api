@@ -1,6 +1,7 @@
 import type { Response, Request, NextFunction } from "express";
-import { AppError } from "../utils/AppError.js";
-import { logger } from "../config/logger.js";
+import { AppError } from "@/utils/AppError.js";
+import { logger } from "@/config/logger.js";
+import { isDuplicateKeyError } from "@/utils/mongoErrors.js";
 
 export const errorHandler = (
     err: unknown,
@@ -28,6 +29,18 @@ export const errorHandler = (
             status: "error",
             message: err.message,
             details: err.details,
+        });
+        return;
+    }
+
+    // Safety net for unique-index violations nobody translated closer to the
+    // source. A conflict is the client's problem, not a server fault, so it
+    // shouldn't surface as a 500.
+    if (isDuplicateKeyError(err)) {
+        logger.warn({ err, method: req.method, path: req.originalUrl }, "duplicate key conflict");
+        res.status(409).json({
+            status: "error",
+            message: "Resource already exists",
         });
         return;
     }

@@ -2,6 +2,20 @@
 
 This document is the single source of truth for how the project is built. Every decision below has a short reason attached. If we change our minds later, we update this file first, then the code.
 
+> **Superseded in three places.** This was written before the Cloudinary
+> migration and before the project grew a test suite:
+>
+> - **§7 File uploads** describes disk storage in `./uploads`. Uploads now use
+>   Multer's `memoryStorage()` and stream straight to Cloudinary — nothing is
+>   written to disk. See [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md).
+> - **"No automated tests"** below is no longer true. There are unit and
+>   integration suites under `tests/`, run by Vitest against an in-memory MongoDB.
+> - **Deployment** isn't covered here at all. The app runs on Vercel as a
+>   serverless function; see the README's Deployment section.
+>
+> Everything else — the layering rule, the data model, the error envelope — still
+> holds and still describes the code.
+
 ---
 
 ## 1. The big picture
@@ -311,17 +325,17 @@ This is the order we will write the code. Each step leaves the app runnable, so 
 
 ## 13. API endpoints (final)
 
-| Method | Path             | Auth | Purpose                                 |
-| ------ | ---------------- | ---- | --------------------------------------- |
+| Method | Path                    | Auth | Purpose                                 |
+| ------ | ----------------------- | ---- | --------------------------------------- |
 | POST   | `/api/v1/auth/register` | —    | Create an account, return JWT           |
 | POST   | `/api/v1/auth/login`    | —    | Log in, return JWT                      |
 | GET    | `/api/v1/auth/me`       | ✅   | Current user info                       |
 | POST   | `/api/v1/media`         | ✅   | Upload one file + metadata              |
 | GET    | `/api/v1/media`         | ✅   | List own media (filter/search/paginate) |
 | GET    | `/api/v1/media/:id`     | ✅   | Get one media item (owner only)         |
-| PUT    | `/api/v1/media/:id`     | ✅   | Update metadata (owner only)            |
+| PATCH  | `/api/v1/media/:id`     | ✅   | Update metadata (owner only)            |
 | DELETE | `/api/v1/media/:id`     | ✅   | Delete media + file (owner only)        |
-| GET    | `/health`        | —    | Liveness probe                          |
+| GET    | `/health`               | —    | Liveness probe                          |
 
 ---
 

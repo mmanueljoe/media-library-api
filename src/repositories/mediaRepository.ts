@@ -1,5 +1,16 @@
-import { Media, type MediaDoc } from "../models/media.js";
-import { type CreateMediaInput } from "../types/types.js";
+import { Media, type MediaDoc } from "@/models/media.js";
+
+type CreateMediaInput = {
+    ownerId: string;
+    title: string;
+    tags?: string[];
+    category: "image" | "document";
+    url: string;
+    publicId: string;
+    originalName: string;
+    mimeType: string;
+    size: number;
+};
 
 export const createMedia = async (data: CreateMediaInput): Promise<MediaDoc> => {
     return await Media.create(data);
@@ -19,7 +30,10 @@ export const findMediaByOwner = async (
 ): Promise<{ total: number; results: MediaDoc[] }> => {
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, unknown> = { ownerId } as unknown as Record<string, unknown>;
+    const filter: Record<string, unknown> = { ownerId, deletedAt: null } as unknown as Record<
+        string,
+        unknown
+    >;
     if (options?.category) filter.category = options.category;
     if (options?.tags?.length) filter.tags = { $in: options.tags };
     if (options?.search) filter.$text = { $search: options.search };
@@ -40,19 +54,55 @@ export const findMediaByOwner = async (
 };
 
 export const findMediaById = async (id: string): Promise<MediaDoc | null> => {
-    return await Media.findById(id);
+    return await Media.findOne({ _id: id, deletedAt: null });
 };
 
-export const deleteMediaById = async (id: string): Promise<MediaDoc | null> => {
-    return await Media.findByIdAndDelete(id);
+export const softDeleteMediaById = async (id: string): Promise<MediaDoc | null> => {
+    return await Media.findOneAndUpdate(
+        { _id: id, deletedAt: null },
+        { deletedAt: new Date() },
+        { returnDocument: "after" }
+    );
 };
 
 export const updateMediaById = async (
     id: string,
     patch: Partial<Pick<CreateMediaInput, "title" | "tags" | "category">>
 ): Promise<MediaDoc | null> => {
-    return await Media.findByIdAndUpdate(id, patch, {
-        new: true,
+    return await Media.findOneAndUpdate({ _id: id, deletedAt: null }, patch, {
+        returnDocument: "after",
         runValidators: true,
     });
+};
+
+/**
+ * The one read that deliberately ignores the deletedAt filter. Restore needs to
+ * see the deleted document, and the ownership check needs it too — otherwise
+ * restore couldn't tell "not yours" from "doesn't exist".
+ */
+export const findDeletedMediaById = async (id: string): Promise<MediaDoc | null> => {
+    return await Media.findOne({ _id: id, deletedAt: { $ne: null } });
+};
+
+export const restoreMediaById = async (id: string): Promise<MediaDoc | null> => {
+    return await Media.findOneAndUpdate(
+        { _id: id, deletedAt: { $ne: null } },
+        { deletedAt: null },
+        { returnDocument: "after" }
+    );
+};
+
+/**
+ * Purge candidates: soft-deleted longer ago than the retention window. Capped
+ * because the caller has to destroy a Cloudinary asset per row and a serverless
+ * invocation has a wall clock to respect.
+ */
+export const findMediaDeletedBefore = async (cutoff: Date, limit: number): Promise<MediaDoc[]> => {
+    return await Media.find({ deletedAt: { $ne: null, $lt: cutoff } })
+        .sort({ deletedAt: 1 })
+        .limit(limit);
+};
+
+export const hardDeleteMediaById = async (id: string): Promise<MediaDoc | null> => {
+    return await Media.findByIdAndDelete(id);
 };

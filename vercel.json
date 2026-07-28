@@ -1,0 +1,16 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "buildCommand": "yarn build",
+    "build": {
+        "env": {
+            "MONGOMS_DISABLE_POSTINSTALL": "1"
+        }
+    },
+    "crons": [
+        {
+            "path": "/api/cron/purge-deleted-media",
+            "schedule": "0 3 * * *"
+        }
+    ],
+    "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+}

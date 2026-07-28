@@ -2,6 +2,9 @@
     "compilerOptions": {
         // File Layout
         "outDir": "./dist",
+        "paths": {
+            "@/*": ["./src/*"]
+        },
 
         // Environment Settings
         "module": "nodenext",
