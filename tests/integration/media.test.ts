@@ -164,7 +164,7 @@ describe("GET /api/v1/media/:id", () => {
         expect(res.status).toBe(404);
     });
 
-    it("returns 403 when the caller is not the owner", async () => {
+    it("returns 404 for another user's media, not revealing that it exists", async () => {
         const tokenA = await registerUser("owner-a@test.local");
         const tokenB = await registerUser("owner-b@test.local");
         const upload = await uploadOne(tokenA);
@@ -172,7 +172,29 @@ describe("GET /api/v1/media/:id", () => {
 
         const res = await api().get(`/api/v1/media/${id}`).set(authHeader(tokenB));
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(404);
+    });
+
+    /**
+     * The point of returning 404 rather than 403 is that the two cases can't be
+     * told apart. Asserting each is 404 separately wouldn't catch a difference in
+     * the message, which would leak the same information a 403 did.
+     */
+    it("gives a byte-identical response for someone else's id and a made-up one", async () => {
+        const tokenA = await registerUser("indist-a@test.local");
+        const tokenB = await registerUser("indist-b@test.local");
+        const upload = await uploadOne(tokenA);
+
+        const someoneElses = await api()
+            .get(`/api/v1/media/${upload.body.data._id}`)
+            .set(authHeader(tokenB));
+
+        const nonExistent = await api()
+            .get(`/api/v1/media/${VALID_BUT_NONEXISTENT_ID}`)
+            .set(authHeader(tokenB));
+
+        expect(someoneElses.status).toBe(nonExistent.status);
+        expect(someoneElses.body).toEqual(nonExistent.body);
     });
 });
 
@@ -201,7 +223,7 @@ describe("PATCH /api/v1/media/:id", () => {
         expect(res.status).toBe(400);
     });
 
-    it("returns 403 when the caller is not the owner", async () => {
+    it("returns 404 for another user's media, not revealing that it exists", async () => {
         const tokenA = await registerUser("update-owner-a@test.local");
         const tokenB = await registerUser("update-owner-b@test.local");
         const upload = await uploadOne(tokenA);
@@ -212,7 +234,7 @@ describe("PATCH /api/v1/media/:id", () => {
             .set(authHeader(tokenB))
             .send({ title: "hijack" });
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(404);
     });
 
     it("returns 404 for a non-existent id", async () => {
@@ -252,7 +274,7 @@ describe("DELETE /api/v1/media/:id", () => {
         expect(res.status).toBe(404);
     });
 
-    it("returns 403 when the caller is not the owner", async () => {
+    it("returns 404 for another user's media, not revealing that it exists", async () => {
         const tokenA = await registerUser("delete-owner-a@test.local");
         const tokenB = await registerUser("delete-owner-b@test.local");
         const upload = await uploadOne(tokenA);
@@ -260,6 +282,6 @@ describe("DELETE /api/v1/media/:id", () => {
 
         const res = await api().delete(`/api/v1/media/${id}`).set(authHeader(tokenB));
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(404);
     });
 });

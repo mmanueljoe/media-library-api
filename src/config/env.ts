@@ -25,16 +25,9 @@ const envSchema = z.object({
         ),
 
     MEDIA_RETENTION_DAYS: z.coerce.number().positive().default(30),
-    // Safety valve on the purge job so one run can't try to delete an unbounded
-    // number of assets and blow the function timeout.
+
     MEDIA_PURGE_BATCH_LIMIT: z.coerce.number().positive().default(100),
 
-    /**
-     * Vercel sends this as `Authorization: Bearer <secret>` when it triggers a
-     * cron. Optional in the schema so local dev and tests don't need it, but the
-     * purge endpoint rejects every request when it's unset — an unauthenticated
-     * hard-delete endpoint is worse than a cron that doesn't run.
-     */
     CRON_SECRET: z.string().min(16).optional(),
 
     RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().positive().default(15),
@@ -52,9 +45,7 @@ if (!parsed.success) {
     const issues = parsed.error.issues
         .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
         .join("\n");
-    // Throwing rather than process.exit(1): both fail fast at import time, but
-    // a thrown error carries the message into Vercel's function logs instead of
-    // killing the container with an anonymous non-zero exit.
+
     throw new Error(`Invalid environment configuration:\n${issues}`);
 }
 

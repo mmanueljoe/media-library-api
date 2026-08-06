@@ -244,7 +244,7 @@ Reads the header, verifies the token, loads the user from the database, attaches
 Every `Media` document stores `ownerId` (the user who uploaded it). The media service enforces:
 
 - **Create** — always sets `ownerId` to the current user.
-- **Update / Delete** — loads the media, compares `ownerId` to `req.user._id`. Mismatch → 403 Forbidden.
+- **Update / Delete** — loads the media, compares `ownerId` to `req.user._id`. Mismatch → **404 Not Found**, deliberately identical to the response for an id that does not exist, so probing ids reveals nothing. (This said 403 originally; changed because a 403 confirms the id is real.)
 - **Read** (list and get-by-id) — also filtered by `ownerId`. A user only ever sees their own media.
 
 ---

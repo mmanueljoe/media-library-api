@@ -33,9 +33,6 @@ export const errorHandler = (
         return;
     }
 
-    // Safety net for unique-index violations nobody translated closer to the
-    // source. A conflict is the client's problem, not a server fault, so it
-    // shouldn't surface as a 500.
     if (isDuplicateKeyError(err)) {
         logger.warn({ err, method: req.method, path: req.originalUrl }, "duplicate key conflict");
         res.status(409).json({

@@ -75,13 +75,13 @@ describe("POST /api/v1/media/:id/restore", () => {
         expect(res.status).toBe(404);
     });
 
-    it("403s when the caller is not the owner", async () => {
+    it("404s for another user's media, not revealing that it exists", async () => {
         const { id } = await uploadThenDelete("restore-owner-a@test.local");
         const tokenB = await registerUser("restore-owner-b@test.local");
 
         const res = await api().post(`/api/v1/media/${id}/restore`).set(authHeader(tokenB));
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(404);
     });
 
     it("401s without a token", async () => {

@@ -28,8 +28,6 @@ export const uploadMedia = catchAsync(async (req: Request, res: Response) => {
         ownerId,
         title,
         tags,
-        // Passed through as a claim to be checked, not as the value to store —
-        // the service derives the real category from mimeType.
         declaredCategory: category,
         buffer,
         originalName,

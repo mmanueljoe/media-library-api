@@ -1,8 +1,13 @@
-import type { UploadApiOptions, UploadApiResponse } from "cloudinary";
+import type { UploadApiErrorResponse, UploadApiOptions, UploadApiResponse } from "cloudinary";
 
 import { logger } from "@/config/logger.js";
 import { cloudinary, mimeToResourceType } from "@/config/cloudinary.js";
-import { deriveCategory, type MediaCategory } from "@/config/mediaTypes.js";
+import {
+    allowedMimeTypes,
+    deriveCategory,
+    sniffMimeType,
+    type MediaCategory,
+} from "@/config/mediaTypes.js";
 import { AppError } from "@/utils/AppError.js";
 import {
     createMedia as createMediaRepository,
@@ -18,16 +23,29 @@ import {
 
 const CLOUDINARY_FOLDER = "media-library";
 
+/**
+ * Cloudinary hands its callback an UploadApiErrorResponse — a plain object with
+ * `message`, `name`, and `http_code`, not an Error. Rejecting with it directly
+ * gives a rejection carrying no stack trace, and makes `err instanceof Error`
+ * false everywhere downstream, which our error handler branches on. So we wrap
+ * it, keeping the original as `cause` so nothing is lost.
+ */
+const toError = (error: UploadApiErrorResponse): Error =>
+    new Error(`Cloudinary upload failed: ${error.message} (http ${error.http_code})`, {
+        cause: error,
+    });
+
 const uploadBufferToCloudinary = (
     buffer: Buffer,
     options: UploadApiOptions
 ): Promise<UploadApiResponse> => {
     return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
-            if (error) return reject(error);
+            if (error) return reject(toError(error));
             if (!result) return reject(new Error("Cloudinary returned no result"));
             resolve(result);
         });
+
         stream.end(buffer);
     });
 };
@@ -36,21 +54,30 @@ export const createMedia = async (input: {
     ownerId: string;
     title: string;
     tags?: string[];
-    /** What the client claimed, if anything. The file decides. */
     declaredCategory?: MediaCategory;
     buffer: Buffer;
     originalName: string;
     mimeType: string;
     size: number;
 }) => {
-    const category = deriveCategory(input.mimeType);
+    const actualMimeType = sniffMimeType(input.buffer);
 
-    // Multer's fileFilter rejects unsupported types before we get here, so this
-    // is a guard against the two lists drifting apart, not an expected path.
-    if (!category) throw new AppError("Unsupported file type", 400);
+    if (!actualMimeType) {
+        throw new AppError(
+            `File contents are not a supported type. Allowed: ${allowedMimeTypes.join(", ")}`,
+            400
+        );
+    }
 
-    // Rejecting rather than quietly overriding: a client sending the wrong
-    // category has a bug, and silently fixing it means they never find out.
+    if (actualMimeType !== input.mimeType) {
+        throw new AppError(
+            `File was sent as "${input.mimeType}" but its contents are "${actualMimeType}"`,
+            400
+        );
+    }
+
+    const category = deriveCategory(actualMimeType)!;
+
     if (input.declaredCategory && input.declaredCategory !== category) {
         throw new AppError(
             `Category "${input.declaredCategory}" does not match the uploaded file, which is a "${category}"`,
@@ -58,7 +85,7 @@ export const createMedia = async (input: {
         );
     }
 
-    const resourceType = mimeToResourceType(input.mimeType);
+    const resourceType = mimeToResourceType(actualMimeType);
 
     const uploadResult = await uploadBufferToCloudinary(input.buffer, {
         folder: CLOUDINARY_FOLDER,
@@ -72,7 +99,7 @@ export const createMedia = async (input: {
         url: uploadResult.secure_url,
         publicId: uploadResult.public_id,
         originalName: input.originalName,
-        mimeType: input.mimeType,
+        mimeType: actualMimeType,
         size: input.size,
     };
     if (input.tags !== undefined) createInput.tags = input.tags;
@@ -84,7 +111,8 @@ export const createMedia = async (input: {
             mediaId: media._id.toString(),
             ownerId: input.ownerId,
             publicId: media.publicId,
-            mimeType: input.mimeType,
+            mimeType: actualMimeType,
+            category,
             size: input.size,
         },
         "file uploaded successfully"
@@ -138,22 +166,22 @@ export const getMyMedia = async (
     };
 };
 
-export const getMediaById = async (ownerId: string, mediaId: string) => {
+const findOwnedMediaOrFail = async (ownerId: string, mediaId: string) => {
     const media = await findMediaByIdRepository(mediaId);
 
-    if (!media) throw new AppError("Media not found", 404);
-
-    if (media.ownerId.toString() !== ownerId) throw new AppError("Forbidden", 403);
+    if (media?.ownerId.toString() !== ownerId) {
+        throw new AppError("Media not found", 404);
+    }
 
     return media;
 };
 
+export const getMediaById = async (ownerId: string, mediaId: string) => {
+    return await findOwnedMediaOrFail(ownerId, mediaId);
+};
+
 export const deleteMedia = async (ownerId: string, mediaId: string) => {
-    const media = await findMediaByIdRepository(mediaId);
-
-    if (!media) throw new AppError("Media not found", 404);
-
-    if (media.ownerId.toString() !== ownerId) throw new AppError("Forbidden", 403);
+    const media = await findOwnedMediaOrFail(ownerId, mediaId);
 
     const deleted = await softDeleteMediaByIdRepository(mediaId);
 
@@ -168,11 +196,12 @@ export const deleteMedia = async (ownerId: string, mediaId: string) => {
 };
 
 export const restoreMedia = async (ownerId: string, mediaId: string) => {
+    // Same reasoning as findOwnedMediaOrFail, against the deleted set.
     const media = await findDeletedMediaByIdRepository(mediaId);
 
-    if (!media) throw new AppError("Deleted media not found", 404);
-
-    if (media.ownerId.toString() !== ownerId) throw new AppError("Forbidden", 403);
+    if (media?.ownerId.toString() !== ownerId) {
+        throw new AppError("Deleted media not found", 404);
+    }
 
     const restored = await restoreMediaByIdRepository(mediaId);
 
@@ -239,11 +268,7 @@ export const updateMedia = async (
     mediaId: string,
     patch: { title?: string; tags?: string[] }
 ) => {
-    const media = await findMediaByIdRepository(mediaId);
-
-    if (!media) throw new AppError("Media not found", 404);
-
-    if (media.ownerId.toString() !== ownerId) throw new AppError("Forbidden", 403);
+    await findOwnedMediaOrFail(ownerId, mediaId);
 
     const updated = await updateMediaByIdRepository(mediaId, patch);
 
