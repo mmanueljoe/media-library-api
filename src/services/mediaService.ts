@@ -87,10 +87,32 @@ export const createMedia = async (input: {
 
     const resourceType = mimeToResourceType(actualMimeType);
 
-    const uploadResult = await uploadBufferToCloudinary(input.buffer, {
-        folder: CLOUDINARY_FOLDER,
-        resource_type: resourceType,
-    });
+    /**
+     * A Cloudinary failure is an upstream problem, not a bug in us — but without
+     * this it arrives at the error handler as a plain Error, falls through to the
+     * generic branch, and the client gets an anonymous 500 logged as "unhandled
+     * error". 502 says what actually happened, and the log line carries the
+     * upstream detail instead of burying it.
+     */
+    let uploadResult: UploadApiResponse;
+    try {
+        uploadResult = await uploadBufferToCloudinary(input.buffer, {
+            folder: CLOUDINARY_FOLDER,
+            resource_type: resourceType,
+        });
+    } catch (err: unknown) {
+        logger.error(
+            {
+                err,
+                ownerId: input.ownerId,
+                mimeType: actualMimeType,
+                size: input.size,
+                resourceType,
+            },
+            "cloudinary upload failed"
+        );
+        throw new AppError("Upload to storage provider failed. Please try again.", 502);
+    }
 
     const createInput: Parameters<typeof createMediaRepository>[0] = {
         ownerId: input.ownerId,

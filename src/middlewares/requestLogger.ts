@@ -1,3 +1,4 @@
+import { AsyncResource } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { logger } from "@/config/logger.js";
@@ -17,20 +18,23 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction): 
     res.setHeader("x-request-id", requestId);
 
     runWithRequestContext({ requestId }, () => {
-        res.on("finish", () => {
-            const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
-            logger.info(
-                {
-                    method: req.method,
-                    path: req.originalUrl,
-                    statusCode: res.statusCode,
-                    durationMs: Number(durationMs.toFixed(2)),
-
-                    userId: req.user?.id,
-                },
-                "request"
-            );
-        });
+        res.on(
+            "finish",
+            AsyncResource.bind(() => {
+                const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
+                logger.info(
+                    {
+                        requestId,
+                        method: req.method,
+                        path: req.originalUrl,
+                        statusCode: res.statusCode,
+                        durationMs: Number(durationMs.toFixed(2)),
+                        userId: req.user?.id,
+                    },
+                    "request"
+                );
+            })
+        );
 
         next();
     });
