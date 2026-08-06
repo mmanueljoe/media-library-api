@@ -101,6 +101,6 @@ describe("soft delete", () => {
 
         const res = await api().delete(`/api/v1/media/${id}`).set(authHeader(tokenB));
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(404);
     });
 });

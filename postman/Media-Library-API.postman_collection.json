@@ -142,6 +142,8 @@
                                     "pm.test('returns media id', () => pm.expect(body.data._id).to.be.a('string'));",
                                     "pm.test('returns cloudinary url', () => pm.expect(body.data.url).to.match(/^https:\\/\\//));",
                                     "pm.test('returns publicId', () => pm.expect(body.data.publicId).to.be.a('string'));",
+                                    "pm.test('category was derived by the server', () => pm.expect(body.data.category).to.be.oneOf(['image','document']));",
+                                    "pm.test('tags were split into an array', () => pm.expect(body.data.tags).to.be.an('array'));",
                                     "pm.environment.set('MEDIA_ID', body.data._id);"
                                 ]
                             }
@@ -161,12 +163,15 @@
                                 {
                                     "key": "category",
                                     "value": "image",
-                                    "type": "text"
+                                    "type": "text",
+                                    "disabled": true,
+                                    "description": "Optional — the server derives the category from the file itself. Left disabled so this request works with any allowed file type. Enable it to see the check: send \"image\" with a PDF and the upload is rejected with 400."
                                 },
                                 {
                                     "key": "tags",
-                                    "value": "demo",
-                                    "type": "text"
+                                    "value": "demo,important",
+                                    "type": "text",
+                                    "description": "Comma-separated. form-data cannot send an array, so the server splits this string."
                                 },
                                 {
                                     "key": "file",
@@ -180,7 +185,7 @@
                             "host": ["{{BASE_URL}}"],
                             "path": ["media"]
                         },
-                        "description": "**Before running:** click `Body`, scroll to the `file` row, and use `Select Files` to attach a PNG, JPEG, or PDF under 5 MB. Postman cannot store file bindings in JSON, so this is the one manual step per fresh import."
+                        "description": "Uploads one file. The server reads the file's leading bytes to confirm what it actually is, and derives category from that — a PDF renamed to .png is rejected."
                     }
                 },
                 {
